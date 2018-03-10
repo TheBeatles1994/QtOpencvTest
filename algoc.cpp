@@ -4,24 +4,21 @@ CvTest::CvTest()
 {
 }
 
-CvTest::CvTest(Mat mymat)
-{
-    srcImage = mymat;
-}
 /*
  * 函数功能：
  * 执行边缘腐蚀操作
  */
 void CvTest::startEdgeShrink(Mat srcMat)
 {
-    rstImage = imageBinarizationThreshold(srcMat);
+    Mat rstMat = imageBinarizationThreshold(srcMat);
     for (int i=0;i<40;i++)
     {
-        imshow("result", rstImage);
+        imshow("result", rstMat);
         waitKey();
         Mat tempMat;
-        tempMat = edgeShrink(edgeGenerate(backgroundMark(rstImage), foregroundMark(rstImage)));
-        rstImage += tempMat;
+        tempMat = edgeShrink(edgeGenerate(backgroundMark(rstMat), foregroundMark(rstMat)));
+        rstMat += tempMat;
+        debugShowMat(rstMat);
         cout <<"key"<<endl;
     }
 }
@@ -30,16 +27,17 @@ void CvTest::startEdgeShrink(Mat srcMat)
  * 执行透明化操作
  * 输入点集
  */
-Mat CvTest::startAlphaPic(vector<Point> vecPoint)
+Mat CvTest::alphaPic(vector<Point> vecPoint)
 {
     return vecPointToMat(vecPoint,255,0,0,0);
 }
 /*
  * 函数功能：
  * 执行透明化操作
+ * 已经去除了边隙
  * 输入Mat
  */
-Mat CvTest::startAlphaPic(Mat srcMat)
+Mat CvTest::alphaPic(Mat srcMat)
 {
     vector<vector<Point> > vecVecPoint;
     Mat greyMat = imageBinarizationBorW(srcMat);
@@ -47,46 +45,70 @@ Mat CvTest::startAlphaPic(Mat srcMat)
 
     return vecPointToMat(vecVecPoint[0],255,255,255,0);
 }
+
+
 /*
  * 函数功能：
  * 执行图像旋转
+ * warpAffine()函数中的角度信息是让种子逆时针旋转，比如设置60，意思是逆时针旋转60度
+ * 注意，之前的问题没有解决，即如果不是长宽相等的图片，结果会出错，要么少了头，要么少了尾
+ * 现在的解决思路是使原图长宽相等
  */
-Mat CvTest::startRotatePic(Mat srcMat, int degree)
+Mat CvTest::rotatePic(Mat srcMat, int degree)
 {
+    srcMat = quadrateMat(srcMat);                                               //使原图长宽相等
+
     double angle = degree * CV_PI / 180.;                                       //计算弧度
     double dsin = sin(angle), dcos = cos(angle);                                //计算正余弦
     int width = srcMat.rows;                                                    //原图宽
     int height = srcMat.cols;                                                   //原图高
     int width_rotate= int(height * fabs(dsin) + width * fabs(dcos));            //旋转后图像的宽度
     int height_rotate=int(width * fabs(dsin) + height * fabs(dcos));            //旋转后图像的高度
-    Mat matUpRight(Size(width_rotate,height_rotate),CV_8UC4);                   //旋转后的图像
 
+    Mat matUpRight(Size(width_rotate,height_rotate),CV_8UC4);                   //旋转后的图像
     Mat rMat = getRotationMatrix2D(Point2f(width/2,height/2),degree,1);         //得到旋转矩阵
     rMat.at<double>(0,2) += (width_rotate - width) / 2;                         //水平方向平移量
     rMat.at<double>(1,2) += (height_rotate - height) / 2;                       //竖直方向平移量
-
     warpAffine(srcMat,matUpRight,rMat,Size(matUpRight.rows,matUpRight.cols),
-               INTER_LINEAR,BORDER_REPLICATE);                                  //进行旋转，最后一个参数是边缘处理方式，此处采用的是边缘复制
-    /* 去图片边缘空隙 */
-    Mat matUpRightNoSpace = imageBinarizationThreshold(matUpRight);
-    vector<Point> vecPoint = findImageContours(matUpRightNoSpace)[0];
-    matUpRightNoSpace = vecPointToMat(vecPoint,0,0,255,0);
-    debugShowMat(matUpRightNoSpace);
+               INTER_LINEAR,BORDER_CONSTANT);                                  //进行旋转，最后一个参数是边缘处理方式，此处采用的是边缘复制
 
-    return matUpRightNoSpace;
+    return matUpRight;
 }
+
 /*
  * 函数功能：
- * 得到种子旋转角度
+ * 得到种子图片旋转角度
  */
 float CvTest::getRotateDegree(Mat srcMat)
 {
     vector<vector<Point> > vecVecPoint;
     Mat greyMat = imageBinarizationBorW(srcMat);
     vecVecPoint = findImageContours(greyMat);
-
     RotatedRect rRect = minAreaRect(vecVecPoint[0]);                            //得到最小矩形框
-    return rRect.angle;
+
+    return getRotateRectDegree(rRect);
+}
+/*
+ * 函数功能：
+ * 得到旋转矩形真实角度
+ * | 0度
+ * / 45度
+ * - 90度
+ * \ 135度
+ */
+float CvTest::getRotateRectDegree(RotatedRect calculatedRect)
+{
+    cout << "calculatedRect width:"<<calculatedRect.size.width<<"  calculatedRect height:"<<calculatedRect.size.height<<endl;
+    cout << "calculatedRect angle:"<<calculatedRect.angle<<endl;
+    if(calculatedRect.size.width < calculatedRect.size.height)
+    {
+        cout << "getRotateRectDegree:"<<calculatedRect.angle<<endl;
+        return (calculatedRect.angle);          //负值：顺时针移动
+    }else
+    {
+        cout << "getRotateRectDegree:"<<90+calculatedRect.angle<<endl;
+        return (90+calculatedRect.angle);       //正值：逆时针移动
+    }
 }
 /*
  * 函数功能：
@@ -221,6 +243,40 @@ Mat CvTest::imageBinarizationBorW(Mat srcMat)
 }
 /*
  * 函数功能：
+ * 使图片变成正方形
+ */
+Mat CvTest::quadrateMat(Mat srcMat)
+{
+    int quaLenOfSide = (srcMat.rows>srcMat.cols?srcMat.rows:srcMat.cols);
+
+    Mat matQua(Size(quaLenOfSide,quaLenOfSide),CV_8UC4);                  //旋转后的图像
+    Mat rMat = Mat::zeros(2,3,CV_32FC1);                                  //平移矩阵，特别注意此处需要zero来初始化，否则rMat就算赋值，最后的结果也是未定义的值
+
+    rMat.at<float>(0,0) += 1.0;
+    rMat.at<float>(0,1) += 0;
+    rMat.at<float>(1,0) += 0;
+    rMat.at<float>(1,1) += 1.0;
+    rMat.at<float>(0,2) += (quaLenOfSide-srcMat.cols)/2.0;
+    rMat.at<float>(1,2) += (quaLenOfSide-srcMat.rows)/2.0;
+    warpAffine(srcMat,matQua,rMat,Size(matQua.rows,matQua.cols),
+               INTER_LINEAR,BORDER_CONSTANT);
+
+    return matQua;
+}
+/*
+ * 函数功能：
+ * 去除图片边缘空隙
+ */
+Mat CvTest::removeEdge(Mat srcMat)
+{
+    Mat greyMat = imageBinarizationThreshold(srcMat);         //二值化图像
+    vector<Point> vecPoint = findImageContours(greyMat)[0];   //寻找边缘点集
+    greyMat = vecPointToMat(vecPoint,0,0,255,0);              //边缘点集变成Mat
+
+    return greyMat;
+}
+/*
+ * 函数功能：
  * 将特定的点集变为Mat，背景为白色，点集内为指定色
  */
 Mat CvTest::vecPointToMat(vector<Point> vecPoint, int red, int green, int blue)
@@ -248,7 +304,7 @@ Mat CvTest::vecPointToMat(vector<Point> vecPoint, int red, int green, int blue)
 }
 /*
  * 函数功能：
- * 将特定的点集变为Mat，背景为透明色(由alpha参数决定，0是全透明，255是不透明的)
+ * 将特定的点集变为Mat，背景为黑色透明色(由alpha参数决定，0是全透明，255是不透明的)
  */
 Mat CvTest::vecPointToMat(vector<Point> vecPoint, int red, int green, int blue, int alpha)
 {
@@ -298,11 +354,20 @@ vector<vector<Point> > CvTest::findImageContours(Mat greyMat)
 }
 /*
  * 函数功能：
- * 显示图片
+ * 显示图片，默认显示名称为debug
  */
 void CvTest::debugShowMat(Mat showMat)
 {
     imshow("debug",showMat);
+    waitKey();
+}
+/*
+ * 函数功能：
+ * 显示图片，名称为strName
+ */
+void CvTest::debugShowMat(string strName, Mat showMat)
+{
+    imshow(strName,showMat);
     waitKey();
 }
 
