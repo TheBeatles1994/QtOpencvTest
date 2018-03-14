@@ -10,21 +10,21 @@
 using namespace std;
 using namespace cv;
 
-#define TESTMARIO 0
-
 class CvTest
 {
+    friend void testROI(Mat srcMat);
 public:
     CvTest();
     void startEdgeShrink(Mat srcMat);                       //执行边缘腐蚀操作
     Mat alphaPic(vector<Point> vecPoint);                   //执行透明化操作
     Mat alphaPic(Mat srcMat);                               //执行透明化操作
     Mat rotatePic(Mat srcMat, int degree);                  //执行图像旋转
-    float getRotateDegree(Mat srcMat);                      //得到种子图片旋转角度
+    float getRotateDegree(Mat srcMat);                      //得到种子图片计算后的旋转角度
     float getRotateRectDegree(RotatedRect calculatedRect);  //得到旋转矩形真实角度
     void debugShowMat(Mat showMat);                         //显示图片
     void debugShowMat(string strName, Mat showMat);         //显示图片
     Mat removeEdge(Mat srcMat);                             //去除图片边缘空隙
+    Mat panningPic(Mat srcMat);                             //执行紧密排列（仅供测试）
 
 private:
     Mat backgroundMark(Mat srcMat);                         //生成背景标签
@@ -35,6 +35,7 @@ private:
     Mat imageBinarizationThreshold(Mat srcMat);             //种子图像二值化,种子黑色，背景白色
     Mat imageBinarizationBorW(Mat srcMat);                  //种子图像二值化,种子白色，背景黑色
     Mat quadrateMat(Mat srcMat);                            //使图片变成正方形
+    Mat panningMat(Mat srcMat, Mat &dstMat, float x, float y);//将图像移动到指定图像的位置
     vector<vector<Point> > findImageContours(Mat greyMat);  //寻找图像中的边缘点集
     Mat vecPointToMat(vector<Point> vecPoint, int red, int green, int blue);            //将特定的点集变为Mat，背景为白色，点集内为指定色
     Mat vecPointToMat(vector<Point> vecPoint, int red, int green, int blue, int alpha); //将特定的点集变为Mat，背景为透明色(由alpha参数决定，越高越透明)
@@ -43,3 +44,5 @@ private:
 };
 
 #endif // ALGOC_H
+
+void testROI(Mat srcMat);                     //测试ROI区域

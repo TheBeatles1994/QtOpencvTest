@@ -57,6 +57,8 @@ Mat CvTest::alphaPic(Mat srcMat)
 Mat CvTest::rotatePic(Mat srcMat, int degree)
 {
     srcMat = quadrateMat(srcMat);                                               //使原图长宽相等
+//    debugShowMat(srcMat);
+//    imwrite("tempMat.png",srcMat);
 
     double angle = degree * CV_PI / 180.;                                       //计算弧度
     double dsin = sin(angle), dcos = cos(angle);                                //计算正余弦
@@ -70,9 +72,47 @@ Mat CvTest::rotatePic(Mat srcMat, int degree)
     rMat.at<double>(0,2) += (width_rotate - width) / 2;                         //水平方向平移量
     rMat.at<double>(1,2) += (height_rotate - height) / 2;                       //竖直方向平移量
     warpAffine(srcMat,matUpRight,rMat,Size(matUpRight.rows,matUpRight.cols),
-               INTER_LINEAR,BORDER_CONSTANT);                                  //进行旋转，最后一个参数是边缘处理方式，此处采用的是边缘复制
+               INTER_LINEAR,BORDER_CONSTANT);                                   //进行旋转，最后一个参数是边缘处理方式，此处采用的是边缘复制
 
     return matUpRight;
+}
+
+/*
+ * 函数功能：
+ * 测试ROI区域
+ */
+void testROI(Mat srcMat)
+{
+    Mat matQua(Size(srcMat.cols*3,srcMat.rows*5),CV_8UC4,cv::Scalar(0,0,0,0));            //此处用到CV_8UC4通道，故输入的srcMat必须是4四通道Mat才行
+#if 0
+    Mat dst_roi1 = matQua(Rect(0, 0, srcMat.cols, srcMat.rows));
+    Mat dst_roi2 = matQua(Rect(srcMat.cols*2, 0, srcMat.cols, srcMat.rows));
+    Mat dst_roi3 = matQua(Rect(srcMat.cols, srcMat.rows, srcMat.cols, srcMat.rows));
+    Mat dst_roi4 = matQua(Rect(0, srcMat.rows*2, srcMat.cols, srcMat.rows));
+    Mat dst_roi5 = matQua(Rect(srcMat.cols*2, srcMat.rows*2, srcMat.cols, srcMat.rows));
+    srcMat.copyTo(dst_roi1);
+    srcMat.copyTo(dst_roi2);
+    srcMat.copyTo(dst_roi3);
+    srcMat.copyTo(dst_roi4);
+    srcMat.copyTo(dst_roi5);
+#else
+    CvTest *cvTest = new CvTest;
+    matQua = cvTest->panningMat(srcMat,matQua,0,0);
+    matQua = cvTest->panningMat(srcMat,matQua,0, srcMat.rows);
+    matQua = cvTest->panningMat(srcMat,matQua,0, srcMat.rows*2);
+    matQua = cvTest->panningMat(srcMat,matQua,0, srcMat.rows*3);
+    matQua = cvTest->panningMat(srcMat,matQua,0, srcMat.rows*4);
+
+    matQua = cvTest->panningMat(srcMat,matQua,srcMat.cols*2, 0);
+    matQua = cvTest->panningMat(srcMat,matQua,srcMat.cols*2, srcMat.rows);
+    matQua = cvTest->panningMat(srcMat,matQua,srcMat.cols*2, srcMat.rows*2);
+    matQua = cvTest->panningMat(srcMat,matQua,srcMat.cols*2, srcMat.rows*3);
+    matQua = cvTest->panningMat(srcMat,matQua,srcMat.cols*2, srcMat.rows*4);
+#endif
+
+    imshow("ROI",matQua);
+    imwrite("test.jpg",matQua);
+    waitKey();
 }
 
 /*
@@ -249,19 +289,21 @@ Mat CvTest::quadrateMat(Mat srcMat)
 {
     int quaLenOfSide = (srcMat.rows>srcMat.cols?srcMat.rows:srcMat.cols);
 
-    Mat matQua(Size(quaLenOfSide,quaLenOfSide),CV_8UC4);                  //旋转后的图像
-    Mat rMat = Mat::zeros(2,3,CV_32FC1);                                  //平移矩阵，特别注意此处需要zero来初始化，否则rMat就算赋值，最后的结果也是未定义的值
-
-    rMat.at<float>(0,0) += 1.0;
-    rMat.at<float>(0,1) += 0;
-    rMat.at<float>(1,0) += 0;
-    rMat.at<float>(1,1) += 1.0;
-    rMat.at<float>(0,2) += (quaLenOfSide-srcMat.cols)/2.0;
-    rMat.at<float>(1,2) += (quaLenOfSide-srcMat.rows)/2.0;
-    warpAffine(srcMat,matQua,rMat,Size(matQua.rows,matQua.cols),
-               INTER_LINEAR,BORDER_CONSTANT);
+    Mat matQua(Size(quaLenOfSide,quaLenOfSide),CV_8UC4,Scalar(0,0,0,255));                                        //旋转后的图像
+    panningMat(srcMat,matQua,(quaLenOfSide-srcMat.cols)/2.0,(quaLenOfSide-srcMat.rows)/2.0);    //图像平移
 
     return matQua;
+}
+/*
+ * 函数功能：
+ * 移动源图片到目标图片指定位置
+ */
+Mat CvTest::panningMat(Mat srcMat, Mat &dstMat, float x, float y)
+{
+    Mat dstRoi = dstMat(Rect(x,y, srcMat.cols, srcMat.rows));
+    srcMat.copyTo(dstRoi);
+
+    return dstMat;
 }
 /*
  * 函数功能：
@@ -275,6 +317,7 @@ Mat CvTest::removeEdge(Mat srcMat)
 
     return greyMat;
 }
+
 /*
  * 函数功能：
  * 将特定的点集变为Mat，背景为白色，点集内为指定色

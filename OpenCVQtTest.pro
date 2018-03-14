@@ -12,12 +12,12 @@ INCLUDEPATH+=$$PWD/library/win32/opencv/include
              $$PWD/library/win32/opencv/include/opencv2
 #include($$PWD/common/common.pri)
 
-SOURCES += main.cpp \
-    algoc.cpp
+SOURCES +=  main.cpp \
+            algoc.cpp
 
 HEADERS += \
-    algoc.h \
-    watersshedsegmenter.h
+            algoc.h \
+            watersshedsegmenter.h
 
 LIBS+=-L $$PWD/library/win32/opencv/lib/libopencv_*.a
          $$PWD/library/win32/opencv/libopencv_*.dll
