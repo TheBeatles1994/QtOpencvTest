@@ -29,26 +29,26 @@ void testClass(Mat srcMat)
     Mat alphaMat = alpha->getAlphaPic(srcMat);
     CTRotate *rotate = new CTRotate;
     Mat rotateMat = rotate->getRotateMat(alphaMat, CTRotate::DEGREE180);
-//    Mat rotateMat1 = rotate->getRotateMat(alphaMat, CTRotate::DEGREE0);
-//    Mat mirrorMat1 = rotate->mirrorMat(rotateMat, CTRotate::MIRRORX);
-//    Mat mirrorMat2 = rotate->mirrorMat(rotateMat, CTRotate::MIRRORY);
-//    Mat mirrorMat3 = rotate->mirrorMat(rotateMat1, CTRotate::MIRRORX);
-//    Mat mirrorMat4 = rotate->mirrorMat(rotateMat1, CTRotate::MIRRORY);
+    Mat rotateMat1 = rotate->getRotateMat(alphaMat, CTRotate::DEGREE0);
+    Mat mirrorMat1 = rotate->mirrorMat(rotateMat, CTRotate::MIRRORX);
+    Mat mirrorMat2 = rotate->mirrorMat(rotateMat, CTRotate::MIRRORY);
+    Mat mirrorMat3 = rotate->mirrorMat(rotateMat1, CTRotate::MIRRORX);
+    Mat mirrorMat4 = rotate->mirrorMat(rotateMat1, CTRotate::MIRRORY);
 
-//    Mat matQua(Size(rotateMat.cols*3,rotateMat.rows*5),CV_8UC4,cv::Scalar(0,0,0,0));            //此处用到CV_8UC4通道，故输入的原图必须是4四通道Mat才行
-//    matQua = rotate->panningMat(rotateMat,matQua,0,0);
-//    matQua = rotate->panningMat(rotateMat1,matQua,0, rotateMat.rows);
-//    matQua = rotate->panningMat(rotateMat,matQua,0, rotateMat.rows*2);
-//    matQua = rotate->panningMat(rotateMat1,matQua,0, rotateMat.rows*3);
-//    matQua = rotate->panningMat(rotateMat,matQua,0, rotateMat.rows*4);
+    Mat matQua(Size(rotateMat.cols*3,rotateMat.rows*5),CV_8UC4,cv::Scalar(0,0,0,0));            //此处用到CV_8UC4通道，故输入的原图必须是4四通道Mat才行
+    matQua = rotate->panningMat(rotateMat,matQua,0,0);
+    matQua = rotate->panningMat(rotateMat1,matQua,0, rotateMat.rows);
+    matQua = rotate->panningMat(rotateMat,matQua,0, rotateMat.rows*2);
+    matQua = rotate->panningMat(rotateMat1,matQua,0, rotateMat.rows*3);
+    matQua = rotate->panningMat(rotateMat,matQua,0, rotateMat.rows*4);
 
-//    matQua = rotate->panningMat(mirrorMat1,matQua,rotateMat.cols*2, 0);
-//    matQua = rotate->panningMat(mirrorMat2,matQua,rotateMat.cols*2, rotateMat.rows);
-//    matQua = rotate->panningMat(mirrorMat3,matQua,rotateMat.cols*2, rotateMat.rows*2);
-//    matQua = rotate->panningMat(mirrorMat4,matQua,rotateMat.cols*2, rotateMat.rows*3);
-//    matQua = rotate->panningMat(rotateMat,matQua,rotateMat.cols*2, rotateMat.rows*4);
-    debugShowMat(rotateMat);
-    debugSaveMat(rotateMat);
+    matQua = rotate->panningMat(mirrorMat1,matQua,rotateMat.cols*2, 0);
+    matQua = rotate->panningMat(mirrorMat2,matQua,rotateMat.cols*2, rotateMat.rows);
+    matQua = rotate->panningMat(mirrorMat3,matQua,rotateMat.cols*2, rotateMat.rows*2);
+    matQua = rotate->panningMat(mirrorMat4,matQua,rotateMat.cols*2, rotateMat.rows*3);
+    matQua = rotate->panningMat(rotateMat,matQua,rotateMat.cols*2, rotateMat.rows*4);
+    debugShowMat(matQua);
+    debugSaveMat(matQua);
 #endif
 }
 /*
@@ -260,7 +260,7 @@ Mat CTContour::vecPointToMat(vector<Point> vecPoint, int red, int green, int blu
             Point pt;
             pt.x = rect.x + col;
             pt.y = rect.y + row;
-            if (pointPolygonTest(vecPoint, pt, false) > 0)
+            if (pointPolygonTest(vecPoint, pt, false) >= 0)         //必须是大于等于，等于时会把边框也画上
             {
                 tempMat.at<Vec4b>(row, col)[0] = blue;
                 tempMat.at<Vec4b>(row, col)[1] = green;

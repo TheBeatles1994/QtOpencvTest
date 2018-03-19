@@ -65,11 +65,11 @@ class CTAlpha
     friend class CTRotate;
     friend class CTShrink;
 public:
-    Mat getAlphaPic(vector<Point> vecPoint);                //得到透明种子Mat，输入为边缘点集
-    Mat getAlphaPic(Mat srcMat);                            //得到透明种子Mat，输入为Mat
+    Mat getAlphaPic(vector<Point> vecPoint);                    //得到透明种子Mat，输入为边缘点集
+    Mat getAlphaPic(Mat srcMat);                                //得到透明种子Mat，输入为Mat
 private:
-    static Mat imageBinarizationThreshold(Mat srcMat);             //种子图像二值化,种子是黑色，背景是白色
-    static Mat imageBinarizationBorW(Mat srcMat);                  //种子图像二值化,非黑变黑，黑变白
+    static Mat imageBinarizationThreshold(Mat srcMat);          //种子图像二值化,种子是黑色，背景是白色
+    static Mat imageBinarizationBorW(Mat srcMat);               //种子图像二值化,非黑变黑，黑变白
 };
 
 void testClass(Mat srcMat);                                     //测试ROI区域
