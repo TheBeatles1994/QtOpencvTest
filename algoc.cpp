@@ -8,23 +8,6 @@ void testClass(Mat srcMat)
 {
 
 #if 0
-    Mat matQua(Size(srcMat.cols*3,srcMat.rows*5),CV_8UC4,cv::Scalar(0,0,0,0));            //此处用到CV_8UC4通道，故输入的srcMat必须是4四通道Mat才行
-    CvTest *cvTest = new CvTest;
-    matQua = cvTest->panningMat(srcMat,matQua,0,0);
-    matQua = cvTest->panningMat(srcMat,matQua,0, srcMat.rows);
-    matQua = cvTest->panningMat(srcMat,matQua,0, srcMat.rows*2);
-    matQua = cvTest->panningMat(srcMat,matQua,0, srcMat.rows*3);
-    matQua = cvTest->panningMat(srcMat,matQua,0, srcMat.rows*4);
-
-    matQua = cvTest->panningMat(srcMat,matQua,srcMat.cols*2, 0);
-    matQua = cvTest->panningMat(srcMat,matQua,srcMat.cols*2, srcMat.rows);
-    matQua = cvTest->panningMat(srcMat,matQua,srcMat.cols*2, srcMat.rows*2);
-    matQua = cvTest->panningMat(srcMat,matQua,srcMat.cols*2, srcMat.rows*3);
-    matQua = cvTest->panningMat(srcMat,matQua,srcMat.cols*2, srcMat.rows*4);
-    imshow("ROI",matQua);
-    imwrite("test.jpg",matQua);
-    waitKey();
-#else
     CTAlpha *alpha = new CTAlpha;
     Mat alphaMat = alpha->getAlphaPic(srcMat);
     CTRotate *rotate = new CTRotate;
@@ -36,6 +19,34 @@ void testClass(Mat srcMat)
     Mat mirrorMat4 = rotate->mirrorMat(rotateMat1, CTRotate::MIRRORY);
 
     Mat matQua(Size(rotateMat.cols*3,rotateMat.rows*5),CV_8UC4,cv::Scalar(0,0,0,0));            //此处用到CV_8UC4通道，故输入的原图必须是4四通道Mat才行
+    matQua = rotate->panningMat(rotateMat,matQua,0,0);
+    matQua = rotate->panningMat(rotateMat1,matQua,0, rotateMat.rows);
+    matQua = rotate->panningMat(rotateMat,matQua,0, rotateMat.rows*2);
+    matQua = rotate->panningMat(rotateMat1,matQua,0, rotateMat.rows*3);
+    matQua = rotate->panningMat(rotateMat,matQua,0, rotateMat.rows*4);
+
+    matQua = rotate->panningMat(mirrorMat1,matQua,rotateMat.cols*2, 0);
+    matQua = rotate->panningMat(mirrorMat2,matQua,rotateMat.cols*2, rotateMat.rows);
+    matQua = rotate->panningMat(mirrorMat3,matQua,rotateMat.cols*2, rotateMat.rows*2);
+    matQua = rotate->panningMat(mirrorMat4,matQua,rotateMat.cols*2, rotateMat.rows*3);
+    matQua = rotate->panningMat(rotateMat,matQua,rotateMat.cols*2, rotateMat.rows*4);
+    debugShowMat(matQua);
+    debugSaveMat(matQua);
+#else
+    CTAlpha *alpha = new CTAlpha;
+    Mat alphaMat = alpha->getAlphaPic(srcMat);
+    //debugShowMat(alphaMat);
+    debugSaveMat(alphaMat,"alphaMat.png");
+    debugSaveMat(alphaMat,"alphaMat.jpg");
+    CTRotate *rotate = new CTRotate;
+    Mat rotateMat = rotate->getRotateMat(alphaMat, CTRotate::DEGREE180);
+    Mat rotateMat1 = rotate->getRotateMat(alphaMat, CTRotate::DEGREE0);
+    Mat mirrorMat1 = rotate->mirrorMat(rotateMat, CTRotate::MIRRORX);
+    Mat mirrorMat2 = rotate->mirrorMat(rotateMat, CTRotate::MIRRORY);
+    Mat mirrorMat3 = rotate->mirrorMat(rotateMat1, CTRotate::MIRRORX);
+    Mat mirrorMat4 = rotate->mirrorMat(rotateMat1, CTRotate::MIRRORY);
+
+    Mat matQua(Size(rotateMat.cols*3,rotateMat.rows*5),CV_8UC4,cv::Scalar(255,255,255,0));            //此处用到CV_8UC4通道，故输入的原图必须是4四通道Mat才行
     matQua = rotate->panningMat(rotateMat,matQua,0,0);
     matQua = rotate->panningMat(rotateMat1,matQua,0, rotateMat.rows);
     matQua = rotate->panningMat(rotateMat,matQua,0, rotateMat.rows*2);
@@ -191,14 +202,18 @@ Mat CTShrink::edgeGenerate(Mat back, Mat fore)
 /*
  * 函数功能：
  * 去除图片边缘空隙
+ * 输入：正方形白色透明背景黑色种子图片
  */
 Mat CTRotate::removeEdge(Mat srcMat)
 {
-    Mat greyMat = CTAlpha::imageBinarizationThreshold(srcMat);         //二值化图像
+//    Mat greyMat = CTAlpha::imageBinarizationThreshold(srcMat);         //二值化图像
+    Mat greyMat = CTAlpha::imageBinarizationBorW(srcMat);
+    debugShowMat(greyMat);
     vector<Point> vecPoint = CTContour::findImageContours(greyMat)[0];   //寻找边缘点集
-    greyMat = CTContour::vecPointToMat(vecPoint,0,0,255,0);              //边缘点集变成Mat
-
-    return greyMat;
+//    greyMat = CTContour::vecPointToMat(vecPoint,0,0,255,0);              //边缘点集变成Mat
+    Mat tempMat = CTContour::vecPointToMat(srcMat, vecPoint,0);
+//    debugShowMat(tempMat);
+    return tempMat;
 }
 /*
  * 函数功能：
@@ -281,6 +296,88 @@ Mat CTContour::vecPointToMat(vector<Point> vecPoint, int red, int green, int blu
 }
 /*
  * 函数功能：
+ * 将特定的点集变为Mat，种子为原图颜色
+ * alpha指背景透明度，0是全透明
+ * 背景默认色为白色
+ */
+Mat CTContour::vecPointToMat(Mat srcMat, vector<Point> vecPoint, int alpha)
+{
+    Rect rect = cv::boundingRect(Mat(vecPoint));
+
+    Mat tempMat = Mat(rect.size(), CV_8UC4, Scalar(255, 255, 255,255));
+    for (int row = 0; row < tempMat.rows; row++)
+    {
+        for (int col = 0; col < tempMat.cols; col++)
+        {
+            Point pt;
+            pt.x = rect.x + col;
+            pt.y = rect.y + row;
+            if (pointPolygonTest(vecPoint, pt, false) >= 0)         //必须是大于等于，等于时会把边框也画上
+            {
+                if(srcMat.channels() == 3)
+                {
+                    tempMat.at<Vec4b>(row, col)[0] = srcMat.at<Vec3b>(pt.y, pt.x)[2];
+                    tempMat.at<Vec4b>(row, col)[1] = srcMat.at<Vec3b>(pt.y, pt.x)[1];
+                    tempMat.at<Vec4b>(row, col)[2] = srcMat.at<Vec3b>(pt.y, pt.x)[0];
+                }
+                else
+                {
+                    tempMat.at<Vec4b>(row, col)[0] = srcMat.at<Vec4b>(pt.y, pt.x)[2];
+                    tempMat.at<Vec4b>(row, col)[1] = srcMat.at<Vec4b>(pt.y, pt.x)[1];
+                    tempMat.at<Vec4b>(row, col)[2] = srcMat.at<Vec4b>(pt.y, pt.x)[0];
+                }
+                tempMat.at<Vec4b>(row, col)[3] = 255;
+            }
+            else
+            {
+                tempMat.at<Vec4b>(row, col)[0] = 255;
+                tempMat.at<Vec4b>(row, col)[1] = 255;
+                tempMat.at<Vec4b>(row, col)[2] = 255;
+                tempMat.at<Vec4b>(row, col)[3] = alpha;
+            }
+        }
+    }
+
+    return tempMat;
+}
+/*
+ * 函数功能：
+ * 将特定的点集变为Mat，种子为原图颜色，有空隙
+ */
+Mat CTContour::vecPointToSpaceMat(Mat srcMat, vector<Point> vecPoint, int alpha)
+{
+    Rect rect = cv::boundingRect(Mat(vecPoint));
+    rect.x -= 5;
+    rect.y -= 5;
+    rect.width += 10;
+    rect.height += 10;
+
+    Mat tempMat = Mat(rect.size(), CV_8UC4, Scalar(255, 255, 255,0));
+    for (int row = 5; row < tempMat.rows-5; row++)
+    {
+        for (int col = 5; col < tempMat.cols-5; col++)
+        {
+            Point pt;
+            pt.x = rect.x + col;
+            pt.y = rect.y + row;
+            if (pointPolygonTest(vecPoint, pt, false) >= 0)         //必须是大于等于，等于时会把边框也画上
+            {
+                tempMat.at<Vec4b>(row, col)[0] = srcMat.at<Vec3b>(pt.y, pt.x)[2];
+                tempMat.at<Vec4b>(row, col)[1] = srcMat.at<Vec3b>(pt.y, pt.x)[1];
+                tempMat.at<Vec4b>(row, col)[2] = srcMat.at<Vec3b>(pt.y, pt.x)[0];
+                tempMat.at<Vec4b>(row, col)[3] = 255;
+            }
+            else
+            {
+                tempMat.at<Vec4b>(row, col)[3] = alpha;
+            }
+        }
+    }
+
+    return tempMat;
+}
+/*
+ * 函数功能：
  * 执行透明化操作
  * 输入点集
  */
@@ -293,6 +390,7 @@ Mat CTAlpha::getAlphaPic(vector<Point> vecPoint)
  * 执行透明化操作
  * 已经去除了边隙
  * 输入Mat
+ * 输出原种子，同时还有透明背景（默认是白色）
  */
 Mat CTAlpha::getAlphaPic(Mat srcMat)
 {
@@ -300,7 +398,8 @@ Mat CTAlpha::getAlphaPic(Mat srcMat)
     Mat greyMat = imageBinarizationBorW(srcMat);
     vecVecPoint = CTContour::findImageContours(greyMat);
 
-    return CTContour::vecPointToMat(vecVecPoint[0],255,255,255,0);
+    //return CTContour::vecPointToMat(vecVecPoint[0],255,255,255,0);
+    return CTContour::vecPointToSpaceMat(srcMat, vecVecPoint[0],0);
 }
 /*
  * 函数功能：
@@ -343,7 +442,7 @@ Mat CTRotate::getRotateMat(Mat srcMat, float degree)
 {
     degree += getRotateMatDegree(srcMat);                                       //默认值使种子竖直方向垂直
     srcMat = quadrateMat(srcMat);                                               //使原图长宽相等
-
+    debugSaveMat(srcMat,"quaMat.png");
 
     double angle = degree * CV_PI / 180.;                                       //计算弧度
     double dsin = sin(angle), dcos = cos(angle);                                //计算正余弦
@@ -352,12 +451,16 @@ Mat CTRotate::getRotateMat(Mat srcMat, float degree)
     int width_rotate= int(height * fabs(dsin) + width * fabs(dcos));            //旋转后图像的宽度
     int height_rotate=int(width * fabs(dsin) + height * fabs(dcos));            //旋转后图像的高度
 
-    Mat matUpRight(Size(width_rotate,height_rotate),CV_8UC4);                   //旋转后的图像
+    Mat matUpRight(Size(width_rotate,height_rotate),CV_8UC4,Scalar(255,255,255,0));                   //旋转后的图像
     Mat rMat = getRotationMatrix2D(Point2f(width/2,height/2),degree,1);         //得到旋转矩阵
     rMat.at<double>(0,2) += (width_rotate - width) / 2;                         //水平方向平移量
     rMat.at<double>(1,2) += (height_rotate - height) / 2;                       //竖直方向平移量
     warpAffine(srcMat,matUpRight,rMat,Size(matUpRight.rows,matUpRight.cols),
-               INTER_LINEAR,BORDER_CONSTANT);                                   //进行旋转，最后一个参数是边缘处理方式，此处采用的是边缘复制
+               INTER_LINEAR,BORDER_REPLICATE);                                  //进行旋转，最后一个参数是边缘处理方式，此处采用的是边缘复制
+
+    //debugShowMat(matUpRight);
+    debugSaveMat(matUpRight,"matUpRight.jpg");
+    debugSaveMat(matUpRight,"matUpRight.png");
 
     return removeEdge(matUpRight);
 }
@@ -369,7 +472,7 @@ Mat CTRotate::quadrateMat(Mat srcMat)
 {
     int quaLenOfSide = (srcMat.rows>srcMat.cols?srcMat.rows:srcMat.cols);
 
-    Mat matQua(Size(quaLenOfSide,quaLenOfSide),CV_8UC4,Scalar(0,0,0,0));                                        //旋转后的图像
+    Mat matQua(Size(quaLenOfSide,quaLenOfSide),CV_8UC4,Scalar(255,255,255,0));                                        //旋转后的图像
     panningMat(srcMat,matQua,(quaLenOfSide-srcMat.cols)/2.0,(quaLenOfSide-srcMat.rows)/2.0);    //图像平移
 
     return matQua;
@@ -398,12 +501,13 @@ Mat CTRotate::mirrorMat(Mat srcMat, int type)
 /*
  * 函数功能：
  * 得到使种子Mat竖直向垂直的角度
+ * 输入：透明白色背景的黑色种子图片
  */
 float CTRotate::getRotateMatDegree(Mat srcMat)
 {
     vector<vector<Point> > vecVecPoint;
-    //Mat greyMat = CTAlpha::imageBinarizationBorW(srcMat);
-    Mat greyMat = CTAlpha::imageBinarizationThreshold(srcMat);
+//    Mat greyMat = CTAlpha::imageBinarizationThreshold(srcMat);
+    Mat greyMat = CTAlpha::imageBinarizationBorW(srcMat);
     vecVecPoint = CTContour::findImageContours(greyMat);
     RotatedRect rRect = minAreaRect(vecVecPoint[0]);                            //得到最小矩形框
 

@@ -31,6 +31,8 @@ private:
     static vector<vector<Point> > findImageContours(Mat greyMat);                               //寻找图像中的边缘点集
     static Mat vecPointToMat(vector<Point> vecPoint, int red, int green, int blue);             //将特定的点集变为Mat，背景为白色，点集内为指定色
     static Mat vecPointToMat(vector<Point> vecPoint, int red, int green, int blue, int alpha);  //将特定的点集变为Mat，背景为透明色(由alpha参数决定，越高越透明)
+    static Mat vecPointToMat(Mat srcMat, vector<Point> vecPoint, int alpha);                    //将特定的点集变为Mat，种子为原图颜色
+    static Mat vecPointToSpaceMat(Mat srcMat, vector<Point> vecPoint, int alpha);               //将特定的点集变为Mat，种子为原图颜色，有空隙
 };
 /* 旋转操作类 */
 class CTRotate
