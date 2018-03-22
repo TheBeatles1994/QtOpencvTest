@@ -2,7 +2,7 @@ QT += core
 QT -= gui #不然QImage用不了
 
 TARGET = OpenCVQtTest
-CONFIG += console
+CONFIG += console c++11
 CONFIG -= app_bundle
 
 TEMPLATE = app

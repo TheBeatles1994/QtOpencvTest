@@ -10,13 +10,13 @@ void testClass()
     Mat srcMat2 = imread("D://20.png");
     Mat srcMat3 = imread("D://30.png");
 
-    CTAlpha *alpha = new CTAlpha;
+    shared_ptr<CTAlpha> alpha = make_shared<CTAlpha>();
     Mat alphaMat1 = alpha->getAlphaPic(srcMat1);
     Mat alphaMat2 = alpha->getAlphaPic(srcMat2);
     Mat alphaMat3 = alpha->getAlphaPic(srcMat3);
     vector<Mat> vec1,vec2;
     vector<vector<Mat> > vec;
-    CTRotate *rotate = new CTRotate;
+    shared_ptr<CTRotate> rotate = make_shared<CTRotate>();
     Mat rotateMat1 = rotate->getRotateMat(alphaMat1, CTRotate::DEGREE180);
     Mat rotateMat2 = rotate->getRotateMat(alphaMat1, CTRotate::DEGREE0);
 
@@ -49,9 +49,10 @@ void testClass()
     vec.push_back(vec1);
     vec.push_back(vec2);
 
-    Mat matQua = rotate->arrangeMat(vec,CTRotate::VERTICAL,CTRotate::LEFTARR);
+    Mat matQua = rotate->arrangeMat(vec,CTRotate::HORIZONTAL,CTRotate::LEFTARR);
     debugShowMat(matQua);
     debugSaveMat(matQua);
+
     return;
 }
 /*
@@ -198,20 +199,21 @@ Mat CTShrink::edgeGenerate(Mat back, Mat fore)
  */
 Mat CTRotate::removeEdge(Mat srcMat)
 {
-//    Mat greyMat = CTAlpha::imageBinarizationThreshold(srcMat);         //二值化图像
+    assert(srcMat.channels() ==3 || srcMat.channels()==4);
+
     Mat greyMat = CTAlpha::imageBinarizationBorW(srcMat);
     vector<Point> vecPoint = CTContour::findImageContours(greyMat)[0];   //寻找边缘点集
-//    greyMat = CTContour::vecPointToMat(vecPoint,0,0,255,0);              //边缘点集变成Mat
     Mat tempMat = CTContour::vecPointToMat(srcMat, vecPoint,0);
-//    debugShowMat(tempMat);
     return tempMat;
 }
 /*
  * 函数功能：
  * 寻找图像中的边缘点集
+ * 输入必须是灰度图，一通道
  */
 vector<vector<Point> > CTContour::findImageContours(Mat greyMat)
 {
+    assert(greyMat.channels() == 1);
     vector<vector<Point> > tempContours;
     vector<Vec4i> heichy;
     findContours(greyMat, tempContours, heichy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE, Point(0, 0));
@@ -293,6 +295,8 @@ Mat CTContour::vecPointToMat(vector<Point> vecPoint, int red, int green, int blu
  */
 Mat CTContour::vecPointToMat(Mat srcMat, vector<Point> vecPoint, int alpha)
 {
+    assert(srcMat.channels() == 3||srcMat.channels() == 4);
+
     Rect rect = cv::boundingRect(Mat(vecPoint));
 
     Mat tempMat = Mat(rect.size(), CV_8UC4, Scalar(255, 255, 255,255));
@@ -337,6 +341,8 @@ Mat CTContour::vecPointToMat(Mat srcMat, vector<Point> vecPoint, int alpha)
  */
 Mat CTContour::vecPointToSpaceMat(Mat srcMat, vector<Point> vecPoint, int alpha)
 {
+    assert(srcMat.channels() == 3||srcMat.channels() == 4);
+
     Rect rect = cv::boundingRect(Mat(vecPoint));
     rect.x -= 5;
     rect.y -= 5;
@@ -380,8 +386,8 @@ Mat CTAlpha::getAlphaPic(vector<Point> vecPoint)
  * 函数功能：
  * 执行透明化操作
  * 已经去除了边隙
- * 输入Mat
- * 输出原种子，同时还有透明背景（默认是白色）
+ * 输入三通道或四通道Mat
+ * 输出原种子，同时还有透明背景（默认背景是白色，种子是暗色）
  */
 Mat CTAlpha::getAlphaPic(Mat srcMat)
 {
@@ -389,19 +395,19 @@ Mat CTAlpha::getAlphaPic(Mat srcMat)
     Mat greyMat = imageBinarizationBorW(srcMat);
     vecVecPoint = CTContour::findImageContours(greyMat);
 
-    //return CTContour::vecPointToMat(vecVecPoint[0],255,255,255,0);
     return CTContour::vecPointToSpaceMat(srcMat, vecVecPoint[0],0);
 }
 /*
  * 函数功能：
  * 图像二值化
- * 输入必须是灰度图
+ * 输入必须是三通道或四通道图，输出是灰度图
  * 灰度值大于SEEDGRAYVALUE的为白色，小于SEEDGRAYVALUE的为黑色
  * 种子是黑色，背景是白色
  */
 #define SEEDGRAYVALUE 45                //定义灰度值阈值
 Mat CTAlpha::imageBinarizationThreshold(Mat srcMat)
 {
+    assert(srcMat.channels() == 3 || srcMat.channels() == 4);
     Mat tempMat;
     cvtColor(srcMat,tempMat,CV_BGR2GRAY);
     threshold(tempMat, tempMat, SEEDGRAYVALUE, 255, CV_THRESH_BINARY);
@@ -410,17 +416,18 @@ Mat CTAlpha::imageBinarizationThreshold(Mat srcMat)
 /*
  * 函数功能：
  * 图像二值化
- * 输入必须是灰度图
+ * 输入是原图，输出是灰度图
  * 非黑变黑，黑变白
- * 种子是白色，背景是黑色
- * 这样才能找到边缘点集，若用imageBinarization()函数则不行
+ * 当种子是白色，背景是黑色时
+ * 才能找到边缘点集，若用imageBinarization()函数则不行
  */
 Mat CTAlpha::imageBinarizationBorW(Mat srcMat)
 {
-    Mat tempMat;
-    tempMat = imageBinarizationThreshold(srcMat);
-    threshold(tempMat, tempMat, 0, 255, CV_THRESH_BINARY_INV);
-    return tempMat;
+    assert(srcMat.channels() == 3||srcMat.channels() == 4);
+    Mat greyMat;
+    greyMat = imageBinarizationThreshold(srcMat);
+    threshold(greyMat, greyMat, 0, 255, CV_THRESH_BINARY_INV);
+    return greyMat;
 }
 /*
  * 函数功能：
@@ -431,6 +438,8 @@ Mat CTAlpha::imageBinarizationBorW(Mat srcMat)
  */
 Mat CTRotate::getRotateMat(Mat srcMat, float degree)
 {
+    assert(srcMat.channels() ==3 || srcMat.channels()==4);
+
     degree += getRotateMatDegree(srcMat);                                       //默认值使种子竖直方向垂直
     srcMat = quadrateMat(srcMat);                                               //使原图长宽相等
     debugSaveMat(srcMat,"quaMat.png");
@@ -461,6 +470,7 @@ Mat CTRotate::getRotateMat(Mat srcMat, float degree)
  */
 Mat CTRotate::quadrateMat(Mat srcMat)
 {
+    assert(srcMat.channels() ==3 || srcMat.channels()==4);
     int quaLenOfSide = (srcMat.rows>srcMat.cols?srcMat.rows:srcMat.cols);
 
     Mat matQua(Size(quaLenOfSide,quaLenOfSide),CV_8UC4,Scalar(255,255,255,0));                                        //旋转后的图像
@@ -500,6 +510,8 @@ Mat CTRotate::getMirrorMat(Mat srcMat, int type)
 #define MATSPACE 5
 Mat CTRotate::arrangeMat(vector<vector<Mat> > srcVec, int arrangeMode, int arrangeAlign, int spacing)
 {
+    assert(srcVec.size()>=2);
+
     if(arrangeMode == HORIZONTAL)
     {
         for(vector<vector<Mat> >::iterator ita=srcVec.begin();ita!=srcVec.end();ita++)
@@ -593,6 +605,8 @@ Mat CTRotate::arrangeMat(vector<vector<Mat> > srcVec, int arrangeMode, int arran
  */
 float CTRotate::getRotateMatDegree(Mat srcMat)
 {
+    assert(srcMat.channels() ==3 || srcMat.channels()==4);
+
     vector<vector<Point> > vecVecPoint;
 //    Mat greyMat = CTAlpha::imageBinarizationThreshold(srcMat);
     Mat greyMat = CTAlpha::imageBinarizationBorW(srcMat);

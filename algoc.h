@@ -6,6 +6,7 @@
 #include<opencv2/imgproc/imgproc.hpp>
 #include"watersshedsegmenter.h"
 #include<iostream>
+#include<memory>
 
 using namespace std;
 using namespace cv;
@@ -21,6 +22,19 @@ private:
     Mat watershedProc(Mat mymat, Mat srcMat);               //分水岭算法
     Mat edgeShrink(Mat srcMat);                             //边缘腐蚀
     Mat edgeGenerate(Mat back, Mat fore);                   //边缘生成
+};
+
+/* 透明操作类 */
+class CTAlpha
+{
+    friend class CTRotate;
+    friend class CTShrink;
+public:
+    Mat getAlphaPic(vector<Point> vecPoint);                    //得到透明种子Mat，输入为边缘点集
+    Mat getAlphaPic(Mat srcMat);                                //得到透明种子Mat，输入为Mat
+private:
+    static Mat imageBinarizationThreshold(Mat srcMat);          //种子图像二值化,种子是黑色，背景是白色
+    static Mat imageBinarizationBorW(Mat srcMat);               //种子图像二值化,非黑变黑，黑变白
 };
 
 /* 点集操作类 */
@@ -74,18 +88,7 @@ private:
     float getRotateUprightDegree(RotatedRect calculatedRect);       //得到使旋转矩形竖直向垂直的角度
     Mat removeEdge(Mat srcMat);                                     //去除图片边缘空隙
 };
-/* 透明操作类 */
-class CTAlpha
-{
-    friend class CTRotate;
-    friend class CTShrink;
-public:
-    Mat getAlphaPic(vector<Point> vecPoint);                    //得到透明种子Mat，输入为边缘点集
-    Mat getAlphaPic(Mat srcMat);                                //得到透明种子Mat，输入为Mat
-private:
-    static Mat imageBinarizationThreshold(Mat srcMat);          //种子图像二值化,种子是黑色，背景是白色
-    static Mat imageBinarizationBorW(Mat srcMat);               //种子图像二值化,非黑变黑，黑变白
-};
+
 
 void testClass();                                     //测试ROI区域
 void debugShowMat(Mat showMat,string strName = "debug");        //显示图片
