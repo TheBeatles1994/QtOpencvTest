@@ -4,63 +4,55 @@
  * 函数功能：
  * 测试ROI区域
  */
-void testClass(Mat srcMat)
+void testClass()
 {
+    Mat srcMat1 = imread("D://135.png");
+    Mat srcMat2 = imread("D://20.png");
+    Mat srcMat3 = imread("D://30.png");
 
-#if 0
     CTAlpha *alpha = new CTAlpha;
-    Mat alphaMat = alpha->getAlphaPic(srcMat);
+    Mat alphaMat1 = alpha->getAlphaPic(srcMat1);
+    Mat alphaMat2 = alpha->getAlphaPic(srcMat2);
+    Mat alphaMat3 = alpha->getAlphaPic(srcMat3);
+    vector<Mat> vec1,vec2;
+    vector<vector<Mat> > vec;
     CTRotate *rotate = new CTRotate;
-    Mat rotateMat = rotate->getRotateMat(alphaMat, CTRotate::DEGREE180);
-    Mat rotateMat1 = rotate->getRotateMat(alphaMat, CTRotate::DEGREE0);
-    Mat mirrorMat1 = rotate->mirrorMat(rotateMat, CTRotate::MIRRORX);
-    Mat mirrorMat2 = rotate->mirrorMat(rotateMat, CTRotate::MIRRORY);
-    Mat mirrorMat3 = rotate->mirrorMat(rotateMat1, CTRotate::MIRRORX);
-    Mat mirrorMat4 = rotate->mirrorMat(rotateMat1, CTRotate::MIRRORY);
+    Mat rotateMat1 = rotate->getRotateMat(alphaMat1, CTRotate::DEGREE180);
+    Mat rotateMat2 = rotate->getRotateMat(alphaMat1, CTRotate::DEGREE0);
 
-    Mat matQua(Size(rotateMat.cols*3,rotateMat.rows*5),CV_8UC4,cv::Scalar(0,0,0,0));            //此处用到CV_8UC4通道，故输入的原图必须是4四通道Mat才行
-    matQua = rotate->panningMat(rotateMat,matQua,0,0);
-    matQua = rotate->panningMat(rotateMat1,matQua,0, rotateMat.rows);
-    matQua = rotate->panningMat(rotateMat,matQua,0, rotateMat.rows*2);
-    matQua = rotate->panningMat(rotateMat1,matQua,0, rotateMat.rows*3);
-    matQua = rotate->panningMat(rotateMat,matQua,0, rotateMat.rows*4);
+    Mat rotateMat3 = rotate->getRotateMat(alphaMat2, CTRotate::DEGREE180);
+    Mat rotateMat4 = rotate->getRotateMat(alphaMat2, CTRotate::DEGREE0);
 
-    matQua = rotate->panningMat(mirrorMat1,matQua,rotateMat.cols*2, 0);
-    matQua = rotate->panningMat(mirrorMat2,matQua,rotateMat.cols*2, rotateMat.rows);
-    matQua = rotate->panningMat(mirrorMat3,matQua,rotateMat.cols*2, rotateMat.rows*2);
-    matQua = rotate->panningMat(mirrorMat4,matQua,rotateMat.cols*2, rotateMat.rows*3);
-    matQua = rotate->panningMat(rotateMat,matQua,rotateMat.cols*2, rotateMat.rows*4);
+    Mat rotateMat5 = rotate->getRotateMat(alphaMat3, CTRotate::DEGREE180);
+    Mat rotateMat6 = rotate->getRotateMat(alphaMat3, CTRotate::DEGREE0);
+
+    Mat mirrorMat1 = rotate->getMirrorMat(rotateMat1, CTRotate::MIRRORX);
+    Mat mirrorMat2 = rotate->getMirrorMat(rotateMat2, CTRotate::MIRRORY);
+    Mat mirrorMat3 = rotate->getMirrorMat(rotateMat3, CTRotate::MIRRORX);
+    Mat mirrorMat4 = rotate->getMirrorMat(rotateMat4, CTRotate::MIRRORY);
+    Mat mirrorMat5 = rotate->getMirrorMat(rotateMat5, CTRotate::MIRRORX);
+    Mat mirrorMat6 = rotate->getMirrorMat(rotateMat6, CTRotate::MIRRORY);
+
+    //vec1.push_back(rotateMat1);
+    vec1.push_back(rotateMat3);
+    vec1.push_back(rotateMat5);
+    vec1.push_back(mirrorMat3);
+    vec1.push_back(mirrorMat6);
+    vec1.push_back(mirrorMat4);
+
+    vec2.push_back(mirrorMat5);
+    vec2.push_back(mirrorMat4);
+    vec2.push_back(mirrorMat1);
+    vec2.push_back(mirrorMat4);
+    vec2.push_back(mirrorMat2);
+
+    vec.push_back(vec1);
+    vec.push_back(vec2);
+
+    Mat matQua = rotate->arrangeMat(vec,CTRotate::VERTICAL,CTRotate::LEFTARR);
     debugShowMat(matQua);
     debugSaveMat(matQua);
-#else
-    CTAlpha *alpha = new CTAlpha;
-    Mat alphaMat = alpha->getAlphaPic(srcMat);
-    //debugShowMat(alphaMat);
-    debugSaveMat(alphaMat,"alphaMat.png");
-    debugSaveMat(alphaMat,"alphaMat.jpg");
-    CTRotate *rotate = new CTRotate;
-    Mat rotateMat = rotate->getRotateMat(alphaMat, CTRotate::DEGREE180);
-    Mat rotateMat1 = rotate->getRotateMat(alphaMat, CTRotate::DEGREE0);
-    Mat mirrorMat1 = rotate->mirrorMat(rotateMat, CTRotate::MIRRORX);
-    Mat mirrorMat2 = rotate->mirrorMat(rotateMat, CTRotate::MIRRORY);
-    Mat mirrorMat3 = rotate->mirrorMat(rotateMat1, CTRotate::MIRRORX);
-    Mat mirrorMat4 = rotate->mirrorMat(rotateMat1, CTRotate::MIRRORY);
-
-    Mat matQua(Size(rotateMat.cols*3,rotateMat.rows*5),CV_8UC4,cv::Scalar(255,255,255,0));            //此处用到CV_8UC4通道，故输入的原图必须是4四通道Mat才行
-    matQua = rotate->panningMat(rotateMat,matQua,0,0);
-    matQua = rotate->panningMat(rotateMat1,matQua,0, rotateMat.rows);
-    matQua = rotate->panningMat(rotateMat,matQua,0, rotateMat.rows*2);
-    matQua = rotate->panningMat(rotateMat1,matQua,0, rotateMat.rows*3);
-    matQua = rotate->panningMat(rotateMat,matQua,0, rotateMat.rows*4);
-
-    matQua = rotate->panningMat(mirrorMat1,matQua,rotateMat.cols*2, 0);
-    matQua = rotate->panningMat(mirrorMat2,matQua,rotateMat.cols*2, rotateMat.rows);
-    matQua = rotate->panningMat(mirrorMat3,matQua,rotateMat.cols*2, rotateMat.rows*2);
-    matQua = rotate->panningMat(mirrorMat4,matQua,rotateMat.cols*2, rotateMat.rows*3);
-    matQua = rotate->panningMat(rotateMat,matQua,rotateMat.cols*2, rotateMat.rows*4);
-    debugShowMat(matQua);
-    debugSaveMat(matQua);
-#endif
+    return;
 }
 /*
  * 函数功能：
@@ -208,7 +200,6 @@ Mat CTRotate::removeEdge(Mat srcMat)
 {
 //    Mat greyMat = CTAlpha::imageBinarizationThreshold(srcMat);         //二值化图像
     Mat greyMat = CTAlpha::imageBinarizationBorW(srcMat);
-    debugShowMat(greyMat);
     vector<Point> vecPoint = CTContour::findImageContours(greyMat)[0];   //寻找边缘点集
 //    greyMat = CTContour::vecPointToMat(vecPoint,0,0,255,0);              //边缘点集变成Mat
     Mat tempMat = CTContour::vecPointToMat(srcMat, vecPoint,0);
@@ -492,11 +483,108 @@ Mat CTRotate::panningMat(Mat srcMat, Mat &dstMat, float x, float y)
  * 函数功能：
  * 镜像变换
  */
-Mat CTRotate::mirrorMat(Mat srcMat, int type)
+Mat CTRotate::getMirrorMat(Mat srcMat, int type)
 {
     Mat tempMat;
     flip(srcMat, tempMat, type);
     return tempMat;
+}
+/*
+ * 函数功能：
+ * 紧密排列
+ * srcVec为Mat vector（目前只支持两个vector）
+ * arrangeMode为排列方式：横排、竖排
+ * arrangeAlign为对齐方式：左、居中、右
+ * spacing为种子间的间距，默认是0
+ */
+#define MATSPACE 5
+Mat CTRotate::arrangeMat(vector<vector<Mat> > srcVec, int arrangeMode, int arrangeAlign, int spacing)
+{
+    if(arrangeMode == HORIZONTAL)
+    {
+        for(vector<vector<Mat> >::iterator ita=srcVec.begin();ita!=srcVec.end();ita++)
+        {
+            for(vector<Mat>::iterator itb=ita->begin();itb!=ita->end();itb++)
+            {
+                *itb = getRotateMat(*itb, DEGREE90);
+            }
+        }
+    }
+
+    int heightMax=0;    //紧密排列所有单个种子高度最大值
+    int widthMax=0;     //紧密排列所有单个种子宽度最大值
+    int countMax=0;     //紧密排列单个种类中的最大个数，用来确认高度
+    vector<int> heightVec(srcVec.size(), 0);         //紧密排列单个种类种子总高度，用来种子紧密排列
+
+    for(vector<vector<Mat> >::iterator ita=srcVec.begin();ita!=srcVec.end();ita++)
+    {
+        for(vector<Mat>::iterator itb=ita->begin();itb!=ita->end();itb++)
+        {
+            if(itb->rows > heightMax)
+                heightMax = itb->rows;
+            if(itb->cols > widthMax)
+                widthMax = itb->cols;
+        }
+        if(ita->size()>countMax)
+            countMax = ita->size();
+    }
+
+    //下面用到CV_8UC4通道，故输入的原图必须是4四通道Mat才行
+    int matQuaWidth = MATSPACE*2 + widthMax*(srcVec.size()+3) + spacing;  //+3的意思是左右两个空隙以及中间的空隙 目前只有一个spacing，即只支持两排种子排列
+    int matQuaHeight = MATSPACE*2 + heightMax*countMax;
+    Mat matQua(Size(matQuaWidth,matQuaHeight),CV_8UC4,cv::Scalar(255,255,255,0));
+    CTRotate *rotate = new CTRotate;
+
+    for(int i=0;i<srcVec.size();i++)
+    {
+        for(int j=0;j<(srcVec[i]).size();j++)
+        {
+            int offsetAlign;
+            switch (arrangeAlign) {
+            case LEFTARR:
+                offsetAlign = 0;
+                break;
+            case MIDARR:
+                offsetAlign = (widthMax-srcVec[i][j].cols)/2;
+                break;
+            case RIGHTARR:
+                offsetAlign = widthMax-srcVec[i][j].cols;
+                break;
+            default:
+                break;
+            }
+            int panningX = MATSPACE+widthMax*(i*2+1)+offsetAlign+(i==0?0:spacing);
+            int panningY = MATSPACE+heightVec[i];
+            matQua = rotate->panningMat(srcVec[i][j],matQua,panningX,panningY);
+            heightVec[i] += srcVec[i][j].rows;
+        }
+    }
+    /* 使用opencv函数画线 */
+    /* 最上方横线 */
+    line(matQua, Point(MATSPACE, MATSPACE), Point(matQua.cols-MATSPACE, MATSPACE), Scalar(0, 0, 255, 255), 1);
+    /* 左边种子的底线 */
+    line(matQua, Point(MATSPACE, MATSPACE+heightVec[0]), Point(MATSPACE + widthMax*2, MATSPACE+heightVec[0]), Scalar(0, 0, 255, 255), 1);
+    /* 右边种子的底线 */
+    line(matQua, Point(matQua.cols-MATSPACE-widthMax*2, MATSPACE+heightVec[1]),Point(matQua.cols-MATSPACE, MATSPACE+heightVec[1]), Scalar(0, 0, 255, 255), 1);
+    /* 左边种子的边长线 */
+    arrowedLine(matQua, Point(MATSPACE+widthMax/2,MATSPACE+heightVec[0]/2-heightMax/4),Point(MATSPACE+widthMax/2,MATSPACE),Scalar(0, 0, 255, 255),1,8,0,0.02);
+    arrowedLine(matQua, Point(MATSPACE+widthMax/2,MATSPACE+heightVec[0]/2+heightMax/4),Point(MATSPACE+widthMax/2,MATSPACE+heightVec[0]),Scalar(0, 0, 255, 255),1,8,0,0.02);
+    /* 右边种子的边长线 */
+    arrowedLine(matQua, Point(matQua.cols-MATSPACE-widthMax/2,MATSPACE+heightVec[1]/2-heightMax/4),Point(matQua.cols-MATSPACE-widthMax/2,MATSPACE),Scalar(0, 0, 255, 255),1,8,0,0.02);
+    arrowedLine(matQua, Point(matQua.cols-MATSPACE-widthMax/2,MATSPACE+heightVec[1]/2+heightMax/4),Point(matQua.cols-MATSPACE-widthMax/2,MATSPACE+heightVec[1]),Scalar(0, 0, 255, 255),1,8,0,0.02);
+    /* 左边种子的文字 */
+    char buffer[256];
+    int counter = heightVec[0];
+    snprintf(buffer, 4, "%03i", counter);
+    string number = std::string(buffer);
+    putText(matQua, number, Point(0, MATSPACE+heightVec[0]/2), FONT_HERSHEY_PLAIN, 0.8, Scalar(0, 0, 255, 255), 1);
+    /* 右边种子的文字 */
+    counter = heightVec[1];
+    snprintf(buffer, 4, "%03i", counter);
+    number = std::string(buffer);
+    putText(matQua, number, Point(matQua.cols-MATSPACE-widthMax, MATSPACE+heightVec[1]/2), FONT_HERSHEY_PLAIN, 0.8, Scalar(0, 0, 255, 255), 1);
+
+    return matQua;
 }
 /*
  * 函数功能：
