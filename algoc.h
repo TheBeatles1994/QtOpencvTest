@@ -10,6 +10,7 @@
 using namespace std;
 using namespace cv;
 
+/* 边缘腐蚀类 */
 class CTShrink
 {
 public:
