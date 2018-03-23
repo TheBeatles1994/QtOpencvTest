@@ -2,8 +2,11 @@
 
 /*
  * 函数功能：
- * 测试ROI区域
+ * 测试并演示新函数
+ * 此次新增紧密排列类CTAlign，其中排列方式、排列类型的枚举类型变为AlignMode和AlignType，里面名字有小变化，看头文件
+ * 旋转操作类CTRotate去除了arrangeMat函数，紧密排列函数变成了CTAlign中的getAlignMat()
  */
+
 void testClass()
 {
     Mat srcMat1 = imread("D://135.png");
@@ -17,6 +20,7 @@ void testClass()
     vector<Mat> vec1,vec2;
     vector<vector<Mat> > vec;
     shared_ptr<CTRotate> rotate = make_shared<CTRotate>();
+
     Mat rotateMat1 = rotate->getRotateMat(alphaMat1, CTRotate::DEGREE180);
     Mat rotateMat2 = rotate->getRotateMat(alphaMat1, CTRotate::DEGREE0);
 
@@ -33,7 +37,6 @@ void testClass()
     Mat mirrorMat5 = rotate->getMirrorMat(rotateMat5, CTRotate::MIRRORX);
     Mat mirrorMat6 = rotate->getMirrorMat(rotateMat6, CTRotate::MIRRORY);
 
-    //vec1.push_back(rotateMat1);
     vec1.push_back(rotateMat3);
     vec1.push_back(rotateMat5);
     vec1.push_back(mirrorMat3);
@@ -42,16 +45,17 @@ void testClass()
 
     vec2.push_back(mirrorMat5);
     vec2.push_back(mirrorMat4);
-    vec2.push_back(mirrorMat1);
+    vec2.push_back(rotateMat1);
     vec2.push_back(mirrorMat4);
-    vec2.push_back(mirrorMat2);
+    vec2.push_back(rotateMat2);
 
     vec.push_back(vec1);
     vec.push_back(vec2);
 
-    Mat matQua = rotate->arrangeMat(vec,CTRotate::HORIZONTAL,CTRotate::LEFTARR);
+    shared_ptr<CTAlign> align = make_shared<CTAlign>(vec);
+    Mat matQua = align->getAlignMat(CTAlign::HORIZONTAL,CTAlign::MID,20);
     debugShowMat(matQua);
-    debugSaveMat(matQua);
+
 
     return;
 }
@@ -501,105 +505,6 @@ Mat CTRotate::getMirrorMat(Mat srcMat, int type)
 }
 /*
  * 函数功能：
- * 紧密排列
- * srcVec为Mat vector（目前只支持两个vector）
- * arrangeMode为排列方式：横排、竖排
- * arrangeAlign为对齐方式：左、居中、右
- * spacing为种子间的间距，默认是0
- */
-#define MATSPACE 5
-Mat CTRotate::arrangeMat(vector<vector<Mat> > srcVec, int arrangeMode, int arrangeAlign, int spacing)
-{
-    assert(srcVec.size()>=2);
-
-    if(arrangeMode == HORIZONTAL)
-    {
-        for(vector<vector<Mat> >::iterator ita=srcVec.begin();ita!=srcVec.end();ita++)
-        {
-            for(vector<Mat>::iterator itb=ita->begin();itb!=ita->end();itb++)
-            {
-                *itb = getRotateMat(*itb, DEGREE90);
-            }
-        }
-    }
-
-    int heightMax=0;    //紧密排列所有单个种子高度最大值
-    int widthMax=0;     //紧密排列所有单个种子宽度最大值
-    int countMax=0;     //紧密排列单个种类中的最大个数，用来确认高度
-    vector<int> heightVec(srcVec.size(), 0);         //紧密排列单个种类种子总高度，用来种子紧密排列
-
-    for(vector<vector<Mat> >::iterator ita=srcVec.begin();ita!=srcVec.end();ita++)
-    {
-        for(vector<Mat>::iterator itb=ita->begin();itb!=ita->end();itb++)
-        {
-            if(itb->rows > heightMax)
-                heightMax = itb->rows;
-            if(itb->cols > widthMax)
-                widthMax = itb->cols;
-        }
-        if(ita->size()>countMax)
-            countMax = ita->size();
-    }
-
-    //下面用到CV_8UC4通道，故输入的原图必须是4四通道Mat才行
-    int matQuaWidth = MATSPACE*2 + widthMax*(srcVec.size()+3) + spacing;  //+3的意思是左右两个空隙以及中间的空隙 目前只有一个spacing，即只支持两排种子排列
-    int matQuaHeight = MATSPACE*2 + heightMax*countMax;
-    Mat matQua(Size(matQuaWidth,matQuaHeight),CV_8UC4,cv::Scalar(255,255,255,0));
-    CTRotate *rotate = new CTRotate;
-
-    for(int i=0;i<srcVec.size();i++)
-    {
-        for(int j=0;j<(srcVec[i]).size();j++)
-        {
-            int offsetAlign;
-            switch (arrangeAlign) {
-            case LEFTARR:
-                offsetAlign = 0;
-                break;
-            case MIDARR:
-                offsetAlign = (widthMax-srcVec[i][j].cols)/2;
-                break;
-            case RIGHTARR:
-                offsetAlign = widthMax-srcVec[i][j].cols;
-                break;
-            default:
-                break;
-            }
-            int panningX = MATSPACE+widthMax*(i*2+1)+offsetAlign+(i==0?0:spacing);
-            int panningY = MATSPACE+heightVec[i];
-            matQua = rotate->panningMat(srcVec[i][j],matQua,panningX,panningY);
-            heightVec[i] += srcVec[i][j].rows;
-        }
-    }
-    /* 使用opencv函数画线 */
-    /* 最上方横线 */
-    line(matQua, Point(MATSPACE, MATSPACE), Point(matQua.cols-MATSPACE, MATSPACE), Scalar(0, 0, 255, 255), 1);
-    /* 左边种子的底线 */
-    line(matQua, Point(MATSPACE, MATSPACE+heightVec[0]), Point(MATSPACE + widthMax*2, MATSPACE+heightVec[0]), Scalar(0, 0, 255, 255), 1);
-    /* 右边种子的底线 */
-    line(matQua, Point(matQua.cols-MATSPACE-widthMax*2, MATSPACE+heightVec[1]),Point(matQua.cols-MATSPACE, MATSPACE+heightVec[1]), Scalar(0, 0, 255, 255), 1);
-    /* 左边种子的边长线 */
-    arrowedLine(matQua, Point(MATSPACE+widthMax/2,MATSPACE+heightVec[0]/2-heightMax/4),Point(MATSPACE+widthMax/2,MATSPACE),Scalar(0, 0, 255, 255),1,8,0,0.02);
-    arrowedLine(matQua, Point(MATSPACE+widthMax/2,MATSPACE+heightVec[0]/2+heightMax/4),Point(MATSPACE+widthMax/2,MATSPACE+heightVec[0]),Scalar(0, 0, 255, 255),1,8,0,0.02);
-    /* 右边种子的边长线 */
-    arrowedLine(matQua, Point(matQua.cols-MATSPACE-widthMax/2,MATSPACE+heightVec[1]/2-heightMax/4),Point(matQua.cols-MATSPACE-widthMax/2,MATSPACE),Scalar(0, 0, 255, 255),1,8,0,0.02);
-    arrowedLine(matQua, Point(matQua.cols-MATSPACE-widthMax/2,MATSPACE+heightVec[1]/2+heightMax/4),Point(matQua.cols-MATSPACE-widthMax/2,MATSPACE+heightVec[1]),Scalar(0, 0, 255, 255),1,8,0,0.02);
-    /* 左边种子的文字 */
-    char buffer[256];
-    int counter = heightVec[0];
-    snprintf(buffer, 4, "%03i", counter);
-    string number = std::string(buffer);
-    putText(matQua, number, Point(0, MATSPACE+heightVec[0]/2), FONT_HERSHEY_PLAIN, 0.8, Scalar(0, 0, 255, 255), 1);
-    /* 右边种子的文字 */
-    counter = heightVec[1];
-    snprintf(buffer, 4, "%03i", counter);
-    number = std::string(buffer);
-    putText(matQua, number, Point(matQua.cols-MATSPACE-widthMax, MATSPACE+heightVec[1]/2), FONT_HERSHEY_PLAIN, 0.8, Scalar(0, 0, 255, 255), 1);
-
-    return matQua;
-}
-/*
- * 函数功能：
  * 得到使种子Mat竖直向垂直的角度
  * 输入：透明白色背景的黑色种子图片
  */
@@ -632,4 +537,121 @@ float CTRotate::getRotateUprightDegree(RotatedRect calculatedRect)
         cout << "getRotateRectDegree:"<<90+calculatedRect.angle<<endl;
         return (90+calculatedRect.angle);       //正值：逆时针移动
     }
+}
+/*
+ * 函数功能：
+ * 构造函数
+ */
+CTAlign::CTAlign(vector<vector<Mat> > vecVecMat)
+{
+    setAlignMats(vecVecMat);
+}
+/*
+ * 函数功能：
+ * 设置多排Mat
+ */
+void CTAlign::setAlignMats(vector<vector<Mat> > vecVecMat)
+{
+    vector<vector<vector<Point> > >().swap(this->vecPoint);
+    vector<vector<Mat> >().swap(this->vecMat);
+    this->vecMat.swap(vecVecMat);
+}
+/*
+ * 函数功能：
+ * 紧密排列
+ * arrangeMode为排列方式：横排、竖排
+ * arrangeAlign为对齐方式：左、居中、右
+ * spacing为种子间的间距，默认是0
+ */
+#define MATSPACE 5
+Mat CTAlign::getAlignMat(int arrangeMode, int arrangeAlign, int spacing)
+{
+    assert(vecMat.size() == 2);
+
+    if(arrangeMode == HORIZONTAL)
+    {
+        for(vector<vector<Mat> >::iterator ita=vecMat.begin();ita!=vecMat.end();ita++)
+        {
+            for(vector<Mat>::iterator itb=ita->begin();itb!=ita->end();itb++)
+            {
+                shared_ptr<CTRotate> rotate = make_shared<CTRotate>();
+                *itb = rotate->getRotateMat(*itb, CTRotate::DEGREE90);
+            }
+        }
+    }
+
+    int heightMax=0;    //紧密排列所有单个种子高度最大值
+    int widthMax=0;     //紧密排列所有单个种子宽度最大值
+    int countMax=0;     //紧密排列单个种类中的最大个数，用来确认高度
+    vector<int> heightVec(vecMat.size(), 0);         //紧密排列单个种类种子总高度，用来种子紧密排列
+
+    for(vector<vector<Mat> >::iterator ita=vecMat.begin();ita!=vecMat.end();ita++)
+    {
+        for(vector<Mat>::iterator itb=ita->begin();itb!=ita->end();itb++)
+        {
+            if(itb->rows > heightMax)
+                heightMax = itb->rows;
+            if(itb->cols > widthMax)
+                widthMax = itb->cols;
+        }
+        if(ita->size()>countMax)
+            countMax = ita->size();
+    }
+
+    //下面用到CV_8UC4通道，故输入的原图必须是4四通道Mat才行
+    int matQuaWidth = MATSPACE*2 + widthMax*(vecMat.size()+3) + spacing;  //+3的意思是左右两个空隙以及中间的空隙 目前只有一个spacing，即只支持两排种子排列
+    int matQuaHeight = MATSPACE*2 + heightMax*countMax;
+    Mat matQua(Size(matQuaWidth,matQuaHeight),CV_8UC4,cv::Scalar(255,255,255,0));
+
+    for(int i=0;i<vecMat.size();i++)
+    {
+        for(int j=0;j<(vecMat[i]).size();j++)
+        {
+            int offsetAlign;
+            switch (arrangeAlign) {
+            case LEFT:
+                offsetAlign = 0;
+                break;
+            case MID:
+                offsetAlign = (widthMax-vecMat[i][j].cols)/2;
+                break;
+            case RIGHT:
+                offsetAlign = widthMax-vecMat[i][j].cols;
+                break;
+            default:
+                break;
+            }
+            int panningX = MATSPACE+widthMax*(i*2+1)+offsetAlign+(i==0?0:spacing);
+            int panningY = MATSPACE+heightVec[i];
+            shared_ptr<CTRotate> rotate = make_shared<CTRotate>();
+            matQua = rotate->panningMat(vecMat[i][j],matQua,panningX,panningY);
+            heightVec[i] += vecMat[i][j].rows;
+        }
+    }
+    /* 使用opencv函数画线 */
+    /* 最上方横线 */
+    line(matQua, Point(MATSPACE, MATSPACE), Point(matQua.cols-MATSPACE, MATSPACE), Scalar(0, 0, 255, 255), 1);
+    /* 左边种子的底线 */
+    line(matQua, Point(MATSPACE, MATSPACE+heightVec[0]), Point(MATSPACE + widthMax*2, MATSPACE+heightVec[0]), Scalar(0, 0, 255, 255), 1);
+    /* 右边种子的底线 */
+    line(matQua, Point(matQua.cols-MATSPACE-widthMax*2, MATSPACE+heightVec[1]),Point(matQua.cols-MATSPACE, MATSPACE+heightVec[1]), Scalar(0, 0, 255, 255), 1);
+    /* 左边种子的边长线 */
+    arrowedLine(matQua, Point(MATSPACE+widthMax/2,MATSPACE+heightVec[0]/2-heightMax/4),Point(MATSPACE+widthMax/2,MATSPACE),Scalar(0, 0, 255, 255),1,8,0,0.02);
+    arrowedLine(matQua, Point(MATSPACE+widthMax/2,MATSPACE+heightVec[0]/2+heightMax/4),Point(MATSPACE+widthMax/2,MATSPACE+heightVec[0]),Scalar(0, 0, 255, 255),1,8,0,0.02);
+    /* 右边种子的边长线 */
+    arrowedLine(matQua, Point(matQua.cols-MATSPACE-widthMax/2,MATSPACE+heightVec[1]/2-heightMax/4),Point(matQua.cols-MATSPACE-widthMax/2,MATSPACE),Scalar(0, 0, 255, 255),1,8,0,0.02);
+    arrowedLine(matQua, Point(matQua.cols-MATSPACE-widthMax/2,MATSPACE+heightVec[1]/2+heightMax/4),Point(matQua.cols-MATSPACE-widthMax/2,MATSPACE+heightVec[1]),Scalar(0, 0, 255, 255),1,8,0,0.02);
+    /* 左边种子的文字 */
+    char buffer[256];
+    int counter = heightVec[0];
+    snprintf(buffer, 4, "%03i", counter);
+    string number = std::string(buffer);
+    putText(matQua, number, Point(0, MATSPACE+heightVec[0]/2), FONT_HERSHEY_PLAIN, 0.8, Scalar(0, 0, 255, 255), 1);
+    /* 右边种子的文字 */
+    counter = heightVec[1];
+    snprintf(buffer, 4, "%03i", counter);
+    number = std::string(buffer);
+    putText(matQua, number, Point(matQua.cols-MATSPACE-widthMax, MATSPACE+heightVec[1]/2), FONT_HERSHEY_PLAIN, 0.8, Scalar(0, 0, 255, 255), 1);
+
+    return matQua;
 }

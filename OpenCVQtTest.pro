@@ -1,16 +1,16 @@
 QT += core
-QT -= gui #不然QImage用不了
+#QT -= gui #不然QImage用不了
 
 TARGET = OpenCVQtTest
-CONFIG += console c++11
-CONFIG -= app_bundle
+CONFIG += console
+CONFIG += app_bundle
+CONFIG += c++11
 
 TEMPLATE = app
 
 INCLUDEPATH+=$$PWD/library/win32/opencv/include
              $$PWD/library/win32/opencv/include/opencv
              $$PWD/library/win32/opencv/include/opencv2
-#include($$PWD/common/common.pri)
 
 SOURCES +=  main.cpp \
             algoc.cpp

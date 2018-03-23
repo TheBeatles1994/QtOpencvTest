@@ -66,31 +66,49 @@ public:
         MIRRORY = 1,
         MIRRORXY = -1
     };
-    enum ArrangeMode
-    {
-        VERTICAL,
-        HORIZONTAL
-    };
-    enum ArrangeAlign
-    {
-        LEFTARR,
-        MIDARR,
-        RIGHTARR
-    };
 public:
     Mat getRotateMat(Mat srcMat, float degree = 0);                 //将种子转到固定degree角度(自动将种子变垂直，用到了uprightMat函数)
     Mat panningMat(Mat srcMat, Mat &dstMat, float x, float y);      //使种子图片移动到dstMat图的目标位置
-    Mat getMirrorMat(Mat srcMat, int type);                            //镜像变换
-    Mat arrangeMat(vector<vector<Mat> > srcVec, int arrangeMode, int arrangeAlign, int spacing=0);    //紧密排列
+    Mat getMirrorMat(Mat srcMat, int type);                         //镜像变换
 private:
     Mat quadrateMat(Mat srcMat);                                    //使种子图片变成正方形
     float getRotateMatDegree(Mat srcMat);                           //得到种子图片计算后的旋转角度
     float getRotateUprightDegree(RotatedRect calculatedRect);       //得到使旋转矩形竖直向垂直的角度
     Mat removeEdge(Mat srcMat);                                     //去除图片边缘空隙
 };
+/* 紧密排列类 */
+class CTAlign
+{
+public:
+    /* 排列方式：竖直、水平 */
+    enum AlignMode
+    {
+        VERTICAL,
+        HORIZONTAL
+    };
+    /* 排列类型：左对齐、居中、右对齐 */
+    enum AlignType
+    {
+        LEFT,
+        MID,
+        RIGHT
+    };
+public:
+    CTAlign(vector<vector<Mat> > vecVecMat);                            //构造函数
+    Mat getAlignMat(int arrangeMode, int arrangeAlign, int spacing=0);  //紧密排列
+    void setAlignMat(Mat srcMat,int x,int y);                       //设置单个Mat
+    void setAlignMats(vector<Mat> vecMat,int x);                    //设置单排Mat
+    void setAlignMats(vector<vector<Mat> > vecVecMat);              //设置多排Mat
+    vector<Point> getAlignPoints(int x,int y);                      //获取单个Mat坐标信息
+    vector<vector<Point> > getAlignPoints(int x);                   //获取单排Mat坐标信息
+    vector<vector<vector<Point> > > getAlignPoints();               //Mat坐标信息
+private:
+    vector<vector<vector<Point> > > vecPoint;
+    vector<vector<Mat> > vecMat;
+};
 
 
-void testClass();                                     //测试ROI区域
+void testClass();                                               //测试ROI区域
 void debugShowMat(Mat showMat,string strName = "debug");        //显示图片
 void debugSaveMat(Mat saveMat,string saveName = "saveMat.png"); //保存图片
 
