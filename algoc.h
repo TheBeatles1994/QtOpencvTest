@@ -97,11 +97,9 @@ public:
     CTAlign(vector<vector<Mat> > vecVecMat);                            //构造函数
     Mat getAlignMat(int arrangeMode, int arrangeAlign, int spacing=0);  //紧密排列
     void setAlignMat(Mat srcMat,int x,int y);                       //设置单个Mat
-    void setAlignMats(vector<Mat> vecMat,int x);                    //设置单排Mat
     void setAlignMats(vector<vector<Mat> > vecVecMat);              //设置多排Mat
     vector<Point> getAlignPoints(int x,int y);                      //获取单个Mat坐标信息
-    vector<vector<Point> > getAlignPoints(int x);                   //获取单排Mat坐标信息
-    vector<vector<vector<Point> > > getAlignPoints();               //Mat坐标信息
+    vector<vector<vector<Point> > > getAlignPoints();               //获取全部Mat坐标信息
 private:
     vector<vector<vector<Point> > > vecPoint;
     vector<vector<Mat> > vecMat;

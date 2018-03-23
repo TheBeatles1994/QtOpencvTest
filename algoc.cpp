@@ -54,8 +54,15 @@ void testClass()
 
     shared_ptr<CTAlign> align = make_shared<CTAlign>(vec);
     Mat matQua = align->getAlignMat(CTAlign::HORIZONTAL,CTAlign::MID,20);
-    debugShowMat(matQua);
-
+    vector<Point> vPoint = align->getAlignPoints(1,3);
+    cout << vPoint[0]<<vPoint[1]<<endl;
+    debugShowMat(matQua,"test1.png");
+    debugSaveMat(matQua,"test1.png");
+    align->setAlignMat(mirrorMat3,0,0);
+    matQua = align->getAlignMat(CTAlign::HORIZONTAL,CTAlign::MID,20);
+    debugShowMat(matQua,"test2.png");
+    debugSaveMat(matQua,"test2.png");
+    //debugSaveMat(matQua);
 
     return;
 }
@@ -558,6 +565,26 @@ void CTAlign::setAlignMats(vector<vector<Mat> > vecVecMat)
 }
 /*
  * 函数功能：
+ * 获取单个Mat坐标信息
+ * x和y从0开始计数
+ */
+vector<Point> CTAlign::getAlignPoints(int x, int y)
+{
+    assert(x<vecPoint.size());
+    assert(y<vecPoint[x].size());
+
+    return vecPoint[x][y];
+}
+/*
+ * 函数功能：
+ * 获取全部Mat坐标信息
+ */
+vector<vector<vector<Point> > > CTAlign::getAlignPoints()
+{
+    return vecPoint;
+}
+/*
+ * 函数功能：
  * 紧密排列
  * arrangeMode为排列方式：横排、竖排
  * arrangeAlign为对齐方式：左、居中、右
@@ -566,6 +593,7 @@ void CTAlign::setAlignMats(vector<vector<Mat> > vecVecMat)
 #define MATSPACE 5
 Mat CTAlign::getAlignMat(int arrangeMode, int arrangeAlign, int spacing)
 {
+    vector<vector<Mat> > vecMat(this->vecMat);
     assert(vecMat.size() == 2);
 
     if(arrangeMode == HORIZONTAL)
@@ -605,6 +633,7 @@ Mat CTAlign::getAlignMat(int arrangeMode, int arrangeAlign, int spacing)
 
     for(int i=0;i<vecMat.size();i++)
     {
+        vector<vector<Point> > vvPoint;
         for(int j=0;j<(vecMat[i]).size();j++)
         {
             int offsetAlign;
@@ -621,12 +650,17 @@ Mat CTAlign::getAlignMat(int arrangeMode, int arrangeAlign, int spacing)
             default:
                 break;
             }
+            vector<Point> vPoint;
             int panningX = MATSPACE+widthMax*(i*2+1)+offsetAlign+(i==0?0:spacing);
             int panningY = MATSPACE+heightVec[i];
+            vPoint.push_back(Point(panningX,panningY));
+            vPoint.push_back(Point(panningX + vecMat[i][j].cols,panningY + vecMat[i][j].rows));
+            vvPoint.push_back(vPoint);
             shared_ptr<CTRotate> rotate = make_shared<CTRotate>();
             matQua = rotate->panningMat(vecMat[i][j],matQua,panningX,panningY);
             heightVec[i] += vecMat[i][j].rows;
         }
+        this->vecPoint.push_back(vvPoint);
     }
     /* 使用opencv函数画线 */
     /* 最上方横线 */
@@ -654,4 +688,15 @@ Mat CTAlign::getAlignMat(int arrangeMode, int arrangeAlign, int spacing)
     putText(matQua, number, Point(matQua.cols-MATSPACE-widthMax, MATSPACE+heightVec[1]/2), FONT_HERSHEY_PLAIN, 0.8, Scalar(0, 0, 255, 255), 1);
 
     return matQua;
+}
+/*
+ * 函数功能：
+ * 设置单个Mat
+ * x和y从0开始计数
+ */
+void CTAlign::setAlignMat(Mat srcMat, int x, int y)
+{
+    assert(x<vecMat.size());
+    assert(y<vecMat[x].size());
+    vecMat[x][y] = srcMat;
 }
