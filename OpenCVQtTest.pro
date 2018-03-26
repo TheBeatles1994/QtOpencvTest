@@ -1,6 +1,5 @@
 QT += core
-#QT -= gui #不然QImage用不了
-
+#QT -= gui
 TARGET = OpenCVQtTest
 CONFIG += console
 CONFIG += app_bundle
@@ -13,11 +12,11 @@ INCLUDEPATH+=$$PWD/library/win32/opencv/include
              $$PWD/library/win32/opencv/include/opencv2
 
 SOURCES +=  main.cpp \
-            algoc.cpp
+    ctalign.cpp
 
 HEADERS += \
-            algoc.h \
-            watersshedsegmenter.h
+            watersshedsegmenter.h \
+    ctalign.h
 
 LIBS+=-L $$PWD/library/win32/opencv/lib/libopencv_*.a
          $$PWD/library/win32/opencv/libopencv_*.dll

@@ -1,4 +1,4 @@
-#include"algoc.h"
+#include"ctalign.h"
 
 int main(int argc, char *argv[])
 {

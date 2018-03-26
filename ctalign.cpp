@@ -1,4 +1,4 @@
-#include "algoc.h"
+#include "ctalign.h"
 
 /*
  * 函数功能：
@@ -53,16 +53,15 @@ void testClass()
     vec.push_back(vec2);
 
     shared_ptr<CTAlign> align = make_shared<CTAlign>(vec);
-    Mat matQua = align->getAlignMat(CTAlign::HORIZONTAL,CTAlign::MID,20);
+    Mat matQua = align->getAlignMat(CTAlign::VERTICAL,CTAlign::MID,20);
     vector<Point> vPoint = align->getAlignPoints(1,3);
     cout << vPoint[0]<<vPoint[1]<<endl;
     debugShowMat(matQua,"test1.png");
     debugSaveMat(matQua,"test1.png");
     align->setAlignMat(mirrorMat3,0,0);
-    matQua = align->getAlignMat(CTAlign::HORIZONTAL,CTAlign::MID,20);
+    matQua = align->getAlignMat(CTAlign::VERTICAL,CTAlign::MID,20);
     debugShowMat(matQua,"test2.png");
     debugSaveMat(matQua,"test2.png");
-    //debugSaveMat(matQua);
 
     return;
 }
@@ -610,25 +609,26 @@ Mat CTAlign::getAlignMat(int arrangeMode, int arrangeAlign, int spacing)
 
     int heightMax=0;    //紧密排列所有单个种子高度最大值
     int widthMax=0;     //紧密排列所有单个种子宽度最大值
-    int countMax=0;     //紧密排列单个种类中的最大个数，用来确认高度
+    int totalHeight=0;     //紧密排列单个种类中的最大个数，用来确认高度
     vector<int> heightVec(vecMat.size(), 0);         //紧密排列单个种类种子总高度，用来种子紧密排列
 
     for(vector<vector<Mat> >::iterator ita=vecMat.begin();ita!=vecMat.end();ita++)
     {
+        int tempHeight = 0;
         for(vector<Mat>::iterator itb=ita->begin();itb!=ita->end();itb++)
         {
             if(itb->rows > heightMax)
                 heightMax = itb->rows;
             if(itb->cols > widthMax)
                 widthMax = itb->cols;
+            tempHeight += itb->rows;
         }
-        if(ita->size()>countMax)
-            countMax = ita->size();
+        totalHeight = (totalHeight<tempHeight?tempHeight:totalHeight);
     }
 
     //下面用到CV_8UC4通道，故输入的原图必须是4四通道Mat才行
     int matQuaWidth = MATSPACE*2 + widthMax*(vecMat.size()+3) + spacing;  //+3的意思是左右两个空隙以及中间的空隙 目前只有一个spacing，即只支持两排种子排列
-    int matQuaHeight = MATSPACE*2 + heightMax*countMax;
+    int matQuaHeight = MATSPACE*2 + totalHeight;
     Mat matQua(Size(matQuaWidth,matQuaHeight),CV_8UC4,cv::Scalar(255,255,255,0));
 
     for(int i=0;i<vecMat.size();i++)
