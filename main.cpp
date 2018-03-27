@@ -1,8 +1,10 @@
 #include"ctalign.h"
+#include"ctwater.h"
 
 int main(int argc, char *argv[])
 {
-    testClass();
+    testSkeleton();
+    //testAlign();
 
     return 0;
 }

@@ -3,12 +3,12 @@
 /*
  * 函数功能：
  * 测试并演示新函数
- * 此次新增紧密排列类CTAlign，其中排列方式、排列类型的枚举类型变为AlignMode和AlignType，里面名字有小变化，看头文件
- * 旋转操作类CTRotate去除了arrangeMat函数，紧密排列函数变成了CTAlign中的getAlignMat()
+ * 获取紧密排列 函数名称变为alignMat()
  */
 
-void testClass()
+void testAlign()
 {
+#if 0
     Mat srcMat1 = imread("D://135.png");
     Mat srcMat2 = imread("D://20.png");
     Mat srcMat3 = imread("D://30.png");
@@ -53,15 +53,32 @@ void testClass()
     vec.push_back(vec2);
 
     shared_ptr<CTAlign> align = make_shared<CTAlign>(vec);
-    Mat matQua = align->getAlignMat(CTAlign::VERTICAL,CTAlign::MID,20);
-    vector<Point> vPoint = align->getAlignPoints(1,3);
+    Mat matQua = align->alignMat(CTAlign::VERTICAL,CTAlign::MID,20);
+    vector<Point> vPoint = align->getAlignPoint(1,3);
     cout << vPoint[0]<<vPoint[1]<<endl;
     debugShowMat(matQua,"test1.png");
     debugSaveMat(matQua,"test1.png");
     align->setAlignMat(mirrorMat3,0,0);
-    matQua = align->getAlignMat(CTAlign::VERTICAL,CTAlign::MID,20);
+    matQua = align->alignMat(CTAlign::VERTICAL,CTAlign::MID,20);
     debugShowMat(matQua,"test2.png");
     debugSaveMat(matQua,"test2.png");
+#else
+    Mat srcMat1 = imread("D://135.png");
+
+    shared_ptr<CTAlpha> alpha = make_shared<CTAlpha>();
+    Mat alphaMat = alpha->getAlphaPic(srcMat1);
+    shared_ptr<CTRotate> rotate = make_shared<CTRotate>();
+
+    Mat rotateMat = rotate->getRotateMat(alphaMat, CTRotate::DEGREE180);
+    cout << "ori:"<<rotateMat.cols<<" "<<rotateMat.rows<<endl;
+    while(1)
+    {
+        rotateMat = rotate->getRotateMat(rotateMat, CTRotate::DEGREE180);
+        cout << "ori:"<<rotateMat.cols<<" "<<rotateMat.rows<<endl;
+        debugShowMat(rotateMat);
+        debugSaveMat(rotateMat);
+    }
+#endif
 
     return;
 }
@@ -213,7 +230,7 @@ Mat CTRotate::removeEdge(Mat srcMat)
 
     Mat greyMat = CTAlpha::imageBinarizationBorW(srcMat);
     vector<Point> vecPoint = CTContour::findImageContours(greyMat)[0];   //寻找边缘点集
-    Mat tempMat = CTContour::vecPointToMat(srcMat, vecPoint,0);
+    Mat tempMat = CTContour::vecPointToMat(srcMat, vecPoint,0,0);
     return tempMat;
 }
 /*
@@ -234,27 +251,30 @@ vector<vector<Point> > CTContour::findImageContours(Mat greyMat)
  * 将特定的点集变为Mat，背景为白色，点集内为指定色
  * 此函数生成三通道Mat
  */
-Mat CTContour::vecPointToMat(vector<Point> vecPoint, int red, int green, int blue)
+Mat CTContour::vecPointToMat(vector<Point> vecPoint, int red, int green, int blue, int edgeSpacing)
 {
     Rect rect = cv::boundingRect(Mat(vecPoint));
-
+    rect.x -= edgeSpacing;
+    rect.y -= edgeSpacing;
+    rect.width += edgeSpacing*2;
+    rect.height += edgeSpacing*2;
     Mat tempMat = Mat(rect.size(), CV_8UC3, Scalar(255, 255, 255));
-    for (int row = 0; row < tempMat.rows; row++)
+    for (int row = edgeSpacing; row < tempMat.rows-edgeSpacing; row++)
     {
-        for (int col = 0; col < tempMat.cols; col++)
+        for (int col = edgeSpacing; col < tempMat.cols-edgeSpacing; col++)
         {
             Point pt;
             pt.x = rect.x + col;
             pt.y = rect.y + row;
             if (pointPolygonTest(vecPoint, pt, false) >= 0)
             {
-                tempMat.at<Vec4b>(row, col)[0] = blue;
-                tempMat.at<Vec4b>(row, col)[1] = green;
-                tempMat.at<Vec4b>(row, col)[2] = red;
+                tempMat.at<Vec3b>(row, col)[0] = blue;
+                tempMat.at<Vec3b>(row, col)[1] = green;
+                tempMat.at<Vec3b>(row, col)[2] = red;
             }
         }
     }
-
+    debugShowMat(tempMat);
     return tempMat;
 }
 /*
@@ -262,18 +282,17 @@ Mat CTContour::vecPointToMat(vector<Point> vecPoint, int red, int green, int blu
  * 将特定的点集变为Mat，背景为黑色透明色(由alpha参数决定，0是全透明，255是不透明的)
  * 此函数生成四通道Mat
  */
-Mat CTContour::vecPointToMat(vector<Point> vecPoint, int red, int green, int blue, int alpha)
+Mat CTContour::vecPointToMat(vector<Point> vecPoint, int red, int green, int blue, int alpha,int edgeSpacing)
 {
     Rect rect = cv::boundingRect(Mat(vecPoint));
-//    rect.x -= 5;
-//    rect.y -= 5;
-//    rect.width += 10;
-//    rect.height += 10;
-
-    Mat tempMat = Mat(rect.size(), CV_8UC4, Scalar(255, 255, 255,255));
-    for (int row = 0; row < tempMat.rows; row++)
+    rect.x -= edgeSpacing;
+    rect.y -= edgeSpacing;
+    rect.width += edgeSpacing*2;
+    rect.height += edgeSpacing*2;
+    Mat tempMat = Mat(rect.size(), CV_8UC4, Scalar(255, 255, 255,0));
+    for (int row = edgeSpacing; row < tempMat.rows-edgeSpacing; row++)
     {
-        for (int col = 0; col < tempMat.cols; col++)
+        for (int col = edgeSpacing; col < tempMat.cols-edgeSpacing; col++)
         {
             Point pt;
             pt.x = rect.x + col;
@@ -302,17 +321,21 @@ Mat CTContour::vecPointToMat(vector<Point> vecPoint, int red, int green, int blu
  * 将特定的点集变为Mat，种子为原图颜色
  * alpha指背景透明度，0是全透明
  * 背景默认色为白色
+ * 无空隙
  */
-Mat CTContour::vecPointToMat(Mat srcMat, vector<Point> vecPoint, int alpha)
+Mat CTContour::vecPointToMat(Mat srcMat, vector<Point> vecPoint, int alpha,int edgeSpacing)
 {
     assert(srcMat.channels() == 3||srcMat.channels() == 4);
 
     Rect rect = cv::boundingRect(Mat(vecPoint));
-
-    Mat tempMat = Mat(rect.size(), CV_8UC4, Scalar(255, 255, 255,255));
-    for (int row = 0; row < tempMat.rows; row++)
+    rect.x -= edgeSpacing;
+    rect.y -= edgeSpacing;
+    rect.width += edgeSpacing*2;
+    rect.height += edgeSpacing*2;
+    Mat tempMat = Mat(rect.size(), CV_8UC4, Scalar(255, 255, 255,0));
+    for (int row = edgeSpacing; row < tempMat.rows-edgeSpacing; row++)
     {
-        for (int col = 0; col < tempMat.cols; col++)
+        for (int col = edgeSpacing; col < tempMat.cols-edgeSpacing; col++)
         {
             Point pt;
             pt.x = rect.x + col;
@@ -321,15 +344,15 @@ Mat CTContour::vecPointToMat(Mat srcMat, vector<Point> vecPoint, int alpha)
             {
                 if(srcMat.channels() == 3)
                 {
-                    tempMat.at<Vec4b>(row, col)[0] = srcMat.at<Vec3b>(pt.y, pt.x)[2];
+                    tempMat.at<Vec4b>(row, col)[0] = srcMat.at<Vec3b>(pt.y, pt.x)[0];
                     tempMat.at<Vec4b>(row, col)[1] = srcMat.at<Vec3b>(pt.y, pt.x)[1];
-                    tempMat.at<Vec4b>(row, col)[2] = srcMat.at<Vec3b>(pt.y, pt.x)[0];
+                    tempMat.at<Vec4b>(row, col)[2] = srcMat.at<Vec3b>(pt.y, pt.x)[2];
                 }
                 else
                 {
-                    tempMat.at<Vec4b>(row, col)[0] = srcMat.at<Vec4b>(pt.y, pt.x)[2];
+                    tempMat.at<Vec4b>(row, col)[0] = srcMat.at<Vec4b>(pt.y, pt.x)[0];
                     tempMat.at<Vec4b>(row, col)[1] = srcMat.at<Vec4b>(pt.y, pt.x)[1];
-                    tempMat.at<Vec4b>(row, col)[2] = srcMat.at<Vec4b>(pt.y, pt.x)[0];
+                    tempMat.at<Vec4b>(row, col)[2] = srcMat.at<Vec4b>(pt.y, pt.x)[2];
                 }
                 tempMat.at<Vec4b>(row, col)[3] = 255;
             }
@@ -347,50 +370,12 @@ Mat CTContour::vecPointToMat(Mat srcMat, vector<Point> vecPoint, int alpha)
 }
 /*
  * 函数功能：
- * 将特定的点集变为Mat，种子为原图颜色，有空隙
- */
-Mat CTContour::vecPointToSpaceMat(Mat srcMat, vector<Point> vecPoint, int alpha)
-{
-    assert(srcMat.channels() == 3||srcMat.channels() == 4);
-
-    Rect rect = cv::boundingRect(Mat(vecPoint));
-    rect.x -= 5;
-    rect.y -= 5;
-    rect.width += 10;
-    rect.height += 10;
-
-    Mat tempMat = Mat(rect.size(), CV_8UC4, Scalar(255, 255, 255,0));
-    for (int row = 5; row < tempMat.rows-5; row++)
-    {
-        for (int col = 5; col < tempMat.cols-5; col++)
-        {
-            Point pt;
-            pt.x = rect.x + col;
-            pt.y = rect.y + row;
-            if (pointPolygonTest(vecPoint, pt, false) >= 0)         //必须是大于等于，等于时会把边框也画上
-            {
-                tempMat.at<Vec4b>(row, col)[0] = srcMat.at<Vec3b>(pt.y, pt.x)[2];
-                tempMat.at<Vec4b>(row, col)[1] = srcMat.at<Vec3b>(pt.y, pt.x)[1];
-                tempMat.at<Vec4b>(row, col)[2] = srcMat.at<Vec3b>(pt.y, pt.x)[0];
-                tempMat.at<Vec4b>(row, col)[3] = 255;
-            }
-            else
-            {
-                tempMat.at<Vec4b>(row, col)[3] = alpha;
-            }
-        }
-    }
-
-    return tempMat;
-}
-/*
- * 函数功能：
  * 执行透明化操作
  * 输入点集
  */
 Mat CTAlpha::getAlphaPic(vector<Point> vecPoint)
 {
-    return CTContour::vecPointToMat(vecPoint,255,0,0,0);
+    return CTContour::vecPointToMat(vecPoint,255,0,0,0,0);
 }
 /*
  * 函数功能：
@@ -405,7 +390,7 @@ Mat CTAlpha::getAlphaPic(Mat srcMat)
     Mat greyMat = imageBinarizationBorW(srcMat);
     vecVecPoint = CTContour::findImageContours(greyMat);
 
-    return CTContour::vecPointToSpaceMat(srcMat, vecVecPoint[0],0);
+    return CTContour::vecPointToMat(srcMat, vecVecPoint[0],0,8);
 }
 /*
  * 函数功能：
@@ -451,18 +436,17 @@ Mat CTRotate::getRotateMat(Mat srcMat, float degree)
     assert(srcMat.channels() ==3 || srcMat.channels()==4);
 
     degree += getRotateMatDegree(srcMat);                                       //默认值使种子竖直方向垂直
-    srcMat = quadrateMat(srcMat);                                               //使原图长宽相等
-    debugSaveMat(srcMat,"quaMat.png");
+    srcMat = quadrateMat(srcMat,4);                                               //使原图长宽相等
 
     double angle = degree * CV_PI / 180.;                                       //计算弧度
     double dsin = sin(angle), dcos = cos(angle);                                //计算正余弦
     int width = srcMat.rows;                                                    //原图宽
     int height = srcMat.cols;                                                   //原图高
-    int width_rotate= int(height * fabs(dsin) + width * fabs(dcos));            //旋转后图像的宽度
-    int height_rotate=int(width * fabs(dsin) + height * fabs(dcos));            //旋转后图像的高度
+    float width_rotate= height*1.0 * fabs(dsin) + width*1.0 * fabs(dcos);            //旋转后图像的宽度
+    float height_rotate=width*1.0 * fabs(dsin) + height*1.0 * fabs(dcos);            //旋转后图像的高度
 
     Mat matUpRight(Size(width_rotate,height_rotate),CV_8UC4,Scalar(255,255,255,0));                   //旋转后的图像
-    Mat rMat = getRotationMatrix2D(Point2f(width/2,height/2),degree,1);         //得到旋转矩阵
+    Mat rMat = getRotationMatrix2D(Point2f(width*1.0/2,height*1.0/2),degree,1);         //得到旋转矩阵
     rMat.at<double>(0,2) += (width_rotate - width) / 2;                         //水平方向平移量
     rMat.at<double>(1,2) += (height_rotate - height) / 2;                       //竖直方向平移量
     warpAffine(srcMat,matUpRight,rMat,Size(matUpRight.rows,matUpRight.cols),
@@ -477,14 +461,15 @@ Mat CTRotate::getRotateMat(Mat srcMat, float degree)
 /*
  * 函数功能：
  * 使种子图片变成正方形
+ * 添加空隙
  */
-Mat CTRotate::quadrateMat(Mat srcMat)
+Mat CTRotate::quadrateMat(Mat srcMat, int spacing)
 {
     assert(srcMat.channels() ==3 || srcMat.channels()==4);
-    int quaLenOfSide = (srcMat.rows>srcMat.cols?srcMat.rows:srcMat.cols);
+    int quaLenOfSide = (srcMat.rows>srcMat.cols?srcMat.rows:srcMat.cols)+spacing*2;                       //左右上下各添加2个像素
 
-    Mat matQua(Size(quaLenOfSide,quaLenOfSide),CV_8UC4,Scalar(255,255,255,0));                                        //旋转后的图像
-    panningMat(srcMat,matQua,(quaLenOfSide-srcMat.cols)/2.0,(quaLenOfSide-srcMat.rows)/2.0);    //图像平移
+    Mat matQua(Size(quaLenOfSide,quaLenOfSide),CV_8UC4,Scalar(255,255,255,0));                      //旋转后的图像
+    panningMat(srcMat,matQua,(quaLenOfSide-srcMat.cols)/2.0+spacing,(quaLenOfSide-srcMat.rows)/2.0)+spacing;    //图像平移
 
     return matQua;
 }
@@ -532,15 +517,11 @@ float CTRotate::getRotateMatDegree(Mat srcMat)
  */
 float CTRotate::getRotateUprightDegree(RotatedRect calculatedRect)
 {
-    cout << "calculatedRect width:"<<calculatedRect.size.width<<"  calculatedRect height:"<<calculatedRect.size.height<<endl;
-    cout << "calculatedRect angle:"<<calculatedRect.angle<<endl;
     if(calculatedRect.size.width < calculatedRect.size.height)
     {
-        cout << "getRotateRectDegree:"<<calculatedRect.angle<<endl;
         return (calculatedRect.angle);          //负值：顺时针移动
     }else
     {
-        cout << "getRotateRectDegree:"<<90+calculatedRect.angle<<endl;
         return (90+calculatedRect.angle);       //正值：逆时针移动
     }
 }
@@ -558,21 +539,21 @@ CTAlign::CTAlign(vector<vector<Mat> > vecVecMat)
  */
 void CTAlign::setAlignMats(vector<vector<Mat> > vecVecMat)
 {
-    vector<vector<vector<Point> > >().swap(this->vecPoint);
-    vector<vector<Mat> >().swap(this->vecMat);
-    this->vecMat.swap(vecVecMat);
+    vector<vector<vector<Point> > >().swap(this->vecPoints);
+    vector<vector<Mat> >().swap(this->vecMats);
+    this->vecMats.swap(vecVecMat);
 }
 /*
  * 函数功能：
  * 获取单个Mat坐标信息
  * x和y从0开始计数
  */
-vector<Point> CTAlign::getAlignPoints(int x, int y)
+vector<Point> CTAlign::getAlignPoint(int x, int y)
 {
-    assert(x<vecPoint.size());
-    assert(y<vecPoint[x].size());
+    assert(x<vecPoints.size());
+    assert(y<vecPoints[x].size());
 
-    return vecPoint[x][y];
+    return vecPoints[x][y];
 }
 /*
  * 函数功能：
@@ -580,7 +561,23 @@ vector<Point> CTAlign::getAlignPoints(int x, int y)
  */
 vector<vector<vector<Point> > > CTAlign::getAlignPoints()
 {
-    return vecPoint;
+    return vecPoints;
+}
+/*
+ * 函数功能：
+ * 获取全部Mat
+ */
+vector<vector<Mat> > CTAlign::getAlignMats()
+{
+    return this->vecMats;
+}
+/*
+ * 函数功能：
+ * 获取单个Mat
+ */
+Mat CTAlign::getAlignMat(int x, int y)
+{
+    return this->vecMats[x][y];
 }
 /*
  * 函数功能：
@@ -590,9 +587,9 @@ vector<vector<vector<Point> > > CTAlign::getAlignPoints()
  * spacing为种子间的间距，默认是0
  */
 #define MATSPACE 5
-Mat CTAlign::getAlignMat(int arrangeMode, int arrangeAlign, int spacing)
+Mat CTAlign::alignMat(int arrangeMode, int arrangeAlign, int spacing)
 {
-    vector<vector<Mat> > vecMat(this->vecMat);
+    vector<vector<Mat> > vecMat(this->vecMats);
     assert(vecMat.size() == 2);
 
     if(arrangeMode == HORIZONTAL)
@@ -631,6 +628,7 @@ Mat CTAlign::getAlignMat(int arrangeMode, int arrangeAlign, int spacing)
     int matQuaHeight = MATSPACE*2 + totalHeight;
     Mat matQua(Size(matQuaWidth,matQuaHeight),CV_8UC4,cv::Scalar(255,255,255,0));
 
+    vector<vector<vector<Point> > >().swap(this->vecPoints);
     for(int i=0;i<vecMat.size();i++)
     {
         vector<vector<Point> > vvPoint;
@@ -660,7 +658,7 @@ Mat CTAlign::getAlignMat(int arrangeMode, int arrangeAlign, int spacing)
             matQua = rotate->panningMat(vecMat[i][j],matQua,panningX,panningY);
             heightVec[i] += vecMat[i][j].rows;
         }
-        this->vecPoint.push_back(vvPoint);
+        this->vecPoints.push_back(vvPoint);
     }
     /* 使用opencv函数画线 */
     /* 最上方横线 */
@@ -696,7 +694,7 @@ Mat CTAlign::getAlignMat(int arrangeMode, int arrangeAlign, int spacing)
  */
 void CTAlign::setAlignMat(Mat srcMat, int x, int y)
 {
-    assert(x<vecMat.size());
-    assert(y<vecMat[x].size());
-    vecMat[x][y] = srcMat;
+    assert(x<vecMats.size());
+    assert(y<vecMats[x].size());
+    vecMats[x][y] = srcMat;
 }

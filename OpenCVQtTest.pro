@@ -12,11 +12,12 @@ INCLUDEPATH+=$$PWD/library/win32/opencv/include
              $$PWD/library/win32/opencv/include/opencv2
 
 SOURCES +=  main.cpp \
-    ctalign.cpp
+    ctalign.cpp \
+    ctwater.cpp
 
-HEADERS += \
-            watersshedsegmenter.h \
-    ctalign.h
+HEADERS +=  watersshedsegmenter.h \
+            ctalign.h \
+    ctwater.h
 
 LIBS+=-L $$PWD/library/win32/opencv/lib/libopencv_*.a
          $$PWD/library/win32/opencv/libopencv_*.dll
