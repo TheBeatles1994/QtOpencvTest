@@ -1,7 +1,7 @@
 #ifndef ALGOC_H
 #define ALGOC_H
 
-#include<QCoreApplication>
+//#include<QCoreApplication>
 #include<opencv/highgui.h>
 #include<opencv2/imgproc/imgproc.hpp>
 #include"watersshedsegmenter.h"

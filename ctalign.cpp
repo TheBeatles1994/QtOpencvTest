@@ -8,7 +8,7 @@
 
 void testAlign()
 {
-#if 0
+#if 1
     Mat srcMat1 = imread("D://135.png");
     Mat srcMat2 = imread("D://20.png");
     Mat srcMat3 = imread("D://30.png");
@@ -274,7 +274,6 @@ Mat CTContour::vecPointToMat(vector<Point> vecPoint, int red, int green, int blu
             }
         }
     }
-    debugShowMat(tempMat);
     return tempMat;
 }
 /*
