@@ -16,22 +16,23 @@ using namespace cv;
 class CTSkeleton
 {
 public:
-    Mat getIndexSkeletonMat(Mat srcMat);                    //索引表细化
     Mat getZhangSkeletonMat(Mat srcMat);                    //zhang快速并行细化
     Mat getDistanceTransformMat(Mat srcMat);                //距离变换
     Mat preTreatmentMat(Mat srcMat);                        //预处理种子图像
-    void filterOver(cv::Mat thinSrc);                       //对骨骼化图数据进行过滤，实现两个点之间至少隔一个空白像素
-    std::vector<cv::Point> getPoints(const cv::Mat &thinSrc, unsigned int raudis = 4, unsigned int thresholdMax = 6, unsigned int thresholdMin = 4);
-    //void findPeaks(Mat srcMat);
-    void findValleys(Mat srcMat);
-    Mat multiMats(Mat skeMat, Mat distMat);                       //寻找骨骼和距离变换图像的共同区
+    Mat multiMats(Mat skeMat, Mat distMat);                 //生成骨骼和距离变换图像的共同区
+    Mat flagMats(Mat mulMat);                               //生成flag Mat
+    vector<Point> findEndPoints(Mat multiMat);              //寻找端点
+    vector<Point> findValleyPoints(Mat multiMat);           //寻找谷点
+    vector<Point> findCrossPoints(Mat multiMat);            //寻找交叉点
+    Mat medianFilter(Mat multiMat);                         //中指滤波两点间的骨骼线
+
 private:
-    bool thiningSkeletonByIndex(unsigned char *lpDIBBits, int lWidth, int lHeight); //索引表核心功能函数
     void thinningIteration(Mat& im, int iter);              //Zhang：Perform one thinning iteration.
     void thinning(Mat& im);                                 //Zhang：Function for thinning the given binary image
     Mat imageBinarizationThreshold(Mat srcMat);             //种子图像二值化,种子是黑色，背景是白色
     Mat imageBinarizationBorW(Mat srcMat);                  //种子图像二值化,非黑变黑，黑变白
-    int doFindValley(Mat srcMat, int row, int col);
+    vector<Point> findForks(Mat multiMat);                  //寻找分叉点
+    int getNeighbourPointNum(Mat srcMat, Point point);      //返回一点周围非零点个数
 };
 
 void testSkeleton();            //测试骨架提取
