@@ -6,10 +6,9 @@ Makefile
 Makefile.*
 ui_*.h
 object_script.*
-*.jpg
-*.png
 *.txt
 *.xlsx
 *.licx
 version.h
 ±¸×¢.md
+outimage/

@@ -8,16 +8,31 @@
 void testSkeleton()
 {
     Mat srcMat = imread("D://10.png");  //8UC3
-
+    //debugShowMat(srcMat);
     CTSkeleton ske;
     Mat skeMat= ske.getZhangSkeletonMat(srcMat);        //8UC1
     Mat distMat = ske.getDistanceTransformMat(srcMat);  //8UC1
-    Mat mulMat = ske.multiMats(skeMat,distMat);
-    cout<<"mulMat type:"<<mulMat.type()<<" mulMat ch:"<<mulMat.channels()<<endl;
-    debugShowMat(mulMat);
-    debugSaveMat(mulMat,"test3.jpg");
-    int temp = ske.findValleyPoints(mulMat).size();
-    cout << temp<<endl;
+    //debugShowMat(skeMat);
+    //debugShowMat(distMat);
+    debugSaveMat(distMat, "outimage/test2.jpg");
+//    Mat dropMat = ske.waterDropSegment(distMat, Point(55,70));
+//    debugShowMat(dropMat);
+//    debugSaveMat(dropMat,"outimage/test4.jpg");
+    Mat mulMat = ske.multiMats(skeMat,distMat);         //8UC1
+    //debugShowMat(mulMat);
+    //debugSaveMat(mulMat,"outimage/test3.jpg");
+    ske.createFlagMat(mulMat);
+
+    vector<Point> endVec = ske.findEndPoints();
+    cout <<"end point:"<<endl;
+    for(auto i:endVec)
+        cout<<i<<endl;
+
+//    cout <<"cross point:"<<endl;
+//    vector<Point> crossVec = ske.findCrossPoints(mulMat, endVec[0]);
+//    for(auto i:crossVec)
+//        cout<<i<<endl;
+
     return;
 }
 /*
@@ -89,8 +104,8 @@ Mat CTSkeleton::multiMats(Mat skeMat, Mat distMat)
         {
             if((int)skeMat.at<uchar>(i,j) >= 240)
             {
-                if(distMat.at<float>(i,j)>=20)
-                    rstMat.at<uchar>(i,j) = distMat.at<float>(i,j);
+                if(distMat.at<uchar>(i,j)>=20)
+                    rstMat.at<uchar>(i,j) = distMat.at<uchar>(i,j);
             }
             else
             {
@@ -103,30 +118,21 @@ Mat CTSkeleton::multiMats(Mat skeMat, Mat distMat)
 }
 /*
  * 函数功能：
- * 寻找分叉点
- */
-vector<Point> CTSkeleton::findForks(Mat multiMat)
-{
-
-}
-/*
- * 函数功能：
  * 寻找端点
  */
-vector<Point> CTSkeleton::findEndPoints(Mat multiMat)
+vector<Point> CTSkeleton::findEndPoints()
 {
     vector<Point> vPoint;
     //除去边缘一圈的点
-    for(int i=1;i<multiMat.rows-1;i++)
+    for(int i=1;i<flagMat.rows-1;i++)
     {
-        for(int j=1;j<multiMat.cols-1;j++)
+        for(int j=1;j<flagMat.cols-1;j++)
         {
-            if((multiMat.at<uchar>(i,j)>=20))
+            if((flagMat.at<uchar>(i,j)==0))
             {
-                if(getNeighbourPointNum(multiMat, Point(i, j)) == 1)
+                if(getNeighbourPointNum(flagMat, Point(i, j)) == 1)
                 {
                     vPoint.push_back(Point(i, j));
-                    cout <<"point: "<< i <<" "<<j<<endl;
                 }
             }
         }
@@ -136,40 +142,275 @@ vector<Point> CTSkeleton::findEndPoints(Mat multiMat)
 /*
  * 函数功能：
  * 寻找谷点
- * 待写，需要先写一个矩阵，用来记录每一网格的状态（骨骼上未走过为0，走过为1，背景为1）
  */
-vector<Point> CTSkeleton::findValleyPoints(Mat multiMat)
+vector<Point> CTSkeleton::findCrossPoints(Mat multiMat, Point startPoint)
 {
-
+    doFindCrossPoints(multiMat, startPoint);
+    return crossVec;
 }
 /*
  * 函数功能：
- * 中指滤波两点间的骨骼线
+ * 水滴分割
+ * 这里的灰度跟imageJ中的不一样，感觉不对啊（现在影响不大）
+ * 现在不确定的是单个斜点有没有达到分割效果？？需不需要十字的分割方式
  */
-Mat CTSkeleton::medianFilter(Mat multiMat)
+Mat CTSkeleton::waterDropSegment(Mat distMat, Point waterPoint)
 {
+    assert(waterPoint.x<distMat.rows && waterPoint.y<distMat.cols);
+    Mat rstMat(distMat);                     //结果图
+    int flagI;                              //记录i的值的flag
+    enum DIR dir[2];                        //表示山脊一边下一步方向
+    Point point[2];
+    int greyData[8], centerData, dValue;
+    Point tempPoint[8];
+    Point nextPoint;                        //记录下一点的坐标
+    vector<Point> dropVec;
+    int side;                               //搜索一边或两边
+/*
+ * 0 1 2
+ * 7   3
+ * 6 5 4
+ * 注意斜角是偶数，上下左右是奇数
+ */
+    flagI = 0;          //记录最小下降点的i
+    dValue = -255;      //记录最小差值
+    centerData = distMat.at<uchar>(waterPoint);
 
+    tempPoint[0] = Point(waterPoint.x-1, waterPoint.y-1);
+    tempPoint[1] = Point(waterPoint.x, waterPoint.y-1);
+    tempPoint[2] = Point(waterPoint.x+1, waterPoint.y-1);
+    tempPoint[3] = Point(waterPoint.x+1, waterPoint.y);
+    tempPoint[4] = Point(waterPoint.x+1, waterPoint.y+1);
+    tempPoint[5] = Point(waterPoint.x, waterPoint.y+1);
+    tempPoint[6] = Point(waterPoint.x-1, waterPoint.y+1);
+    tempPoint[7] = Point(waterPoint.x-1, waterPoint.y);
+    greyData[0] = (int)rstMat.at<uchar>(tempPoint[0]);
+    greyData[1] = (int)rstMat.at<uchar>(tempPoint[1]);
+    greyData[2] = (int)rstMat.at<uchar>(tempPoint[2]);
+    greyData[3] = (int)rstMat.at<uchar>(tempPoint[3]);
+    greyData[4] = (int)rstMat.at<uchar>(tempPoint[4]);
+    greyData[5] = (int)rstMat.at<uchar>(tempPoint[5]);
+    greyData[6] = (int)rstMat.at<uchar>(tempPoint[6]);
+    greyData[7] = (int)rstMat.at<uchar>(tempPoint[7]);
+    //先找到下降最陡的方向
+    for(int i=0;i<8;i++)
+    {
+        if(centerData-greyData[i]>=dValue && centerData-greyData[i]<=150 && centerData-greyData[i]>=0)
+        {
+            dValue = centerData-greyData[i];
+            flagI = i;
+            dir[0] = (enum DIR)flagI;
+            point[0] = tempPoint[i];
+        }
+    }
+    //找到最陡方向的反方向
+    if(flagI<=3)
+    {
+        point[1] = tempPoint[flagI+4];
+        dir[1] = (enum DIR)(flagI+4);
+    }
+    else
+    {
+        point[1] = tempPoint[flagI-4];
+        dir[1] = (enum DIR)(flagI-4);
+    }
+    //决定搜索两边还是一边
+    if(greyData[dir[1]]>centerData)
+    {
+        side = 1;
+    }
+    else
+    {
+        side = 2;
+    }
+    //一方向
+    for(int i=0;i<side;i++)
+    {
+        centerData = distMat.at<uchar>(point[i]);
+        nextPoint = point[i];
+        while(centerData != 0)
+        {
+            dropVec.push_back(nextPoint);
+
+            flagI = -1;         //记录最小下降点的i
+            dValue = -255;      //记录最小差值
+            //tempPoint记录顺时针左中右三点
+            switch (dir[i]) {
+            case UPLEFT:
+                tempPoint[0] = Point(nextPoint.x, nextPoint.y-1);
+                tempPoint[1] = Point(nextPoint.x-1, nextPoint.y-1);
+                tempPoint[2] = Point(nextPoint.x-1, nextPoint.y);
+                break;
+            case UPMID:
+                tempPoint[0] = Point(nextPoint.x-1, nextPoint.y-1);
+                tempPoint[1] = Point(nextPoint.x-1, nextPoint.y);
+                tempPoint[2] = Point(nextPoint.x-1, nextPoint.y+1);
+                break;
+            case UPRIGHT:
+                tempPoint[0] = Point(nextPoint.x-1, nextPoint.y);
+                tempPoint[1] = Point(nextPoint.x-1, nextPoint.y+1);
+                tempPoint[2] = Point(nextPoint.x, nextPoint.y+1);
+                break;
+            case MIDRIGHT:
+                tempPoint[0] = Point(nextPoint.x-1, nextPoint.y+1);
+                tempPoint[1] = Point(nextPoint.x, nextPoint.y+1);
+                tempPoint[2] = Point(nextPoint.x+1, nextPoint.y+1);
+                break;
+            case DOWNRIGHT:
+                tempPoint[0] = Point(nextPoint.x, nextPoint.y+1);
+                tempPoint[1] = Point(nextPoint.x+1, nextPoint.y+1);
+                tempPoint[2] = Point(nextPoint.x+1, nextPoint.y);
+                break;
+            case DOWNMID:
+                tempPoint[0] = Point(nextPoint.x+1, nextPoint.y+1);
+                tempPoint[1] = Point(nextPoint.x+1, nextPoint.y);
+                tempPoint[2] = Point(nextPoint.x+1, nextPoint.y-1);
+                break;
+            case DOWNLEFT:
+                tempPoint[0] = Point(nextPoint.x+1, nextPoint.y);
+                tempPoint[1] = Point(nextPoint.x+1, nextPoint.y-1);
+                tempPoint[2] = Point(nextPoint.x, nextPoint.y-1);
+                break;
+            case MIDLEFT:
+                tempPoint[0] = Point(nextPoint.x+1, nextPoint.y-1);
+                tempPoint[1] = Point(nextPoint.x, nextPoint.y-1);
+                tempPoint[2] = Point(nextPoint.x-1, nextPoint.y-1);
+                break;
+            default:
+                break;
+            }
+            //greyData记录顺时针左中右三点的灰度值
+            greyData[0] = rstMat.at<uchar>(tempPoint[0]);
+            greyData[1] = rstMat.at<uchar>(tempPoint[1]);
+            greyData[2] = rstMat.at<uchar>(tempPoint[2]);
+            //找到下落方向
+            for(int i=0;i<3;i++)
+            {
+                if(centerData-greyData[i]>=dValue && centerData-greyData[i]<=150 && centerData-greyData[i]>=0)
+                {
+                    dValue = centerData-greyData[i];
+                    flagI = i;
+                }
+            }
+            //该点无法下落
+            if(flagI == -1)
+            {
+                break;
+            }
+            //flag值为0 1 2
+            if(flagI==0)
+                dir[i] = (enum DIR)((7+(int)dir[i]-1)%7);
+            else if(flagI==1)
+                dir[i] = dir[i];
+            else
+                dir[i] = (enum DIR)((7+(int)dir[i]+1)%7);
+            nextPoint = tempPoint[flagI];
+            centerData = rstMat.at<uchar>(nextPoint);
+        }
+        if(flagI!=-1)
+        {
+            for(auto it=dropVec.begin();it!=dropVec.end();it++)
+            {
+                rstMat.at<uchar>(*it) = 0;
+            }
+        }
+        vector<Point>().swap(dropVec);
+    }
+
+    rstMat.at<uchar>(waterPoint) = 0;
+
+    return rstMat;
 }
 /*
  * 函数功能：
  * 返回一点周围非零点个数
+ * 应当针对的是flagMat！
  */
 int CTSkeleton::getNeighbourPointNum(Mat srcMat, Point point)
 {
-    int count=0;
+    return getNeighbourPoints(srcMat,point).size();
+}
+/*
+ * 函数功能：
+ * 返回一点周围非零点
+ * 应当针对的是flagMat！
+ */
+vector<Point> CTSkeleton::getNeighbourPoints(Mat srcMat, Point point)
+{
+    vector<Point> vecPoint;
 
     for(int i=point.x-1;i<=point.x+1;i++)
     {
         for(int j=point.y-1;j<=point.y+1;j++)
         {
-            if(srcMat.at<uchar>(i,j)>=20)
-                count++;
+            if(!(i==point.x && j==point.y))
+            {
+                if(flagMat.at<uchar>(j,i)==0)
+                    vecPoint.push_back(Point(j, i));
+            }
         }
     }
-    if(srcMat.at<uchar>(point.x, point.y)>=20)
-        count--;
 
-    return count;
+    return vecPoint;
+}
+/*
+ * 函数功能：
+ * 创建标志矩阵
+ * 在使用寻找端点、分叉点函数前要调用此函数
+ */
+void CTSkeleton::createFlagMat(Mat multiMat)
+{
+    flagMat = Mat::zeros(multiMat.size(), CV_8UC1);
+    for(int i=0;i<multiMat.rows;i++)
+    {
+        for(int j=0;j<multiMat.cols;j++)
+        {
+            if(multiMat.at<uchar>(i, j)<=25)
+                flagMat.at<uchar>(i, j)=255;
+        }
+    }
+    //debugShowMat(flagMat);
+    debugSaveMat(flagMat, "flagMat.jpg");
+}
+
+bool CTSkeleton::doFindCrossPoints(Mat multiMat, Point startPoint)
+{
+    int count=0;
+    bool flag = true;
+
+    while(1)
+    {
+        count++;
+
+        if(getNeighbourPointNum(multiMat, startPoint) == 0)
+            break;
+        else if(getNeighbourPointNum(multiMat, startPoint) == 1)
+        {
+            flagMat.at<uchar>(startPoint) = 255;
+            startPoint = getNeighbourPoints(multiMat, startPoint)[0];
+        }
+        else
+        {
+            flagMat.at<uchar>(startPoint) = 255;
+            vector<Point> vecPoint = getNeighbourPoints(multiMat, startPoint);
+            for(auto i:vecPoint)
+            {
+                flagMat.at<uchar>(i) = 255;
+            }
+            for(auto i:vecPoint)
+            {
+                flag = flag && doFindCrossPoints(multiMat, i);
+            }
+            if(flag)
+                crossVec.push_back(startPoint);
+            break;
+        }
+    }
+
+    if(count>1)
+        return true;
+    else
+        return false;
 }
 /*
  * 函数功能：
