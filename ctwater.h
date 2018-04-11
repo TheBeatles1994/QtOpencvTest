@@ -36,6 +36,7 @@ public:
     vector<Point> findCrossPoints(Mat multiMat, Point startPoint);            //寻找交叉点
     Mat waterDropSegment(Mat distMat, Point waterPoint);     //水滴分割
     void createFlagMat(Mat multiMat);                        //创建标志矩阵
+    Mat getFlagMat();                                       //返回标志矩阵
 private:
     void thinningIteration(Mat& im, int iter);              //Zhang：Perform one thinning iteration.
     void thinning(Mat& im);                                 //Zhang：Function for thinning the given binary image

@@ -3,35 +3,45 @@
 /*
  * 函数功能：
  * 测试骨架提取
- * mulMat未解决
  */
 void testSkeleton()
 {
-    Mat srcMat = imread("D://10.png");  //8UC3
+    /* 读取原图片 */
+    Mat srcMat = imread("doc/10.jpg");  //8UC3
     //debugShowMat(srcMat);
     CTSkeleton ske;
+    /* 得到骨骼图像 */
     Mat skeMat= ske.getZhangSkeletonMat(srcMat);        //8UC1
-    Mat distMat = ske.getDistanceTransformMat(srcMat);  //8UC1
     //debugShowMat(skeMat);
+    debugSaveMat(skeMat, "outimage/test1.jpg");
+    /* 得到距离变换图像 */
+    Mat distMat = ske.getDistanceTransformMat(srcMat);  //8UC1
     //debugShowMat(distMat);
     debugSaveMat(distMat, "outimage/test2.jpg");
-//    Mat dropMat = ske.waterDropSegment(distMat, Point(55,70));
-//    debugShowMat(dropMat);
-//    debugSaveMat(dropMat,"outimage/test4.jpg");
+    /* 寻找骨骼和距离变换图像的共同区 */
     Mat mulMat = ske.multiMats(skeMat,distMat);         //8UC1
-    //debugShowMat(mulMat);
+    //debugShowMat(mulMat,"skeleton");
     //debugSaveMat(mulMat,"outimage/test3.jpg");
+    /* 创建标志矩阵 */
     ske.createFlagMat(mulMat);
-
+    /* 找端点 */
     vector<Point> endVec = ske.findEndPoints();
     cout <<"end point:"<<endl;
     for(auto i:endVec)
         cout<<i<<endl;
-
-//    cout <<"cross point:"<<endl;
-//    vector<Point> crossVec = ske.findCrossPoints(mulMat, endVec[0]);
-//    for(auto i:crossVec)
-//        cout<<i<<endl;
+    /* 水滴法测试 */
+//    Mat dropMat = ske.waterDropSegment(distMat, Point(55,70));
+//    debugShowMat(dropMat);
+    //debugSaveMat(dropMat,"outimage/test4.jpg");
+    /* 寻找分叉点坐标 */
+    cout <<"cross point:"<<endl;
+    vector<Point> crossVec = ske.findCrossPoints(mulMat, endVec[0]);
+    for(auto i:crossVec)
+        cout<<i<<endl;
+    /* 查看标志矩阵 */
+//    Mat flagMat = ske.getFlagMat();
+//    debugShowMat(flagMat);
+//    debugSaveMat(flagMat, "outimage/flagMatPro.jpg");
 
     return;
 }
@@ -130,9 +140,9 @@ vector<Point> CTSkeleton::findEndPoints()
         {
             if((flagMat.at<uchar>(i,j)==0))
             {
-                if(getNeighbourPointNum(flagMat, Point(i, j)) == 1)
+                if(getNeighbourPointNum(flagMat, Point(j, i)) == 1)
                 {
-                    vPoint.push_back(Point(i, j));
+                    vPoint.push_back(Point(j, i));
                 }
             }
         }
@@ -346,7 +356,7 @@ vector<Point> CTSkeleton::getNeighbourPoints(Mat srcMat, Point point)
             if(!(i==point.x && j==point.y))
             {
                 if(flagMat.at<uchar>(j,i)==0)
-                    vecPoint.push_back(Point(j, i));
+                    vecPoint.push_back(Point(i, j));
             }
         }
     }
@@ -370,39 +380,55 @@ void CTSkeleton::createFlagMat(Mat multiMat)
         }
     }
     //debugShowMat(flagMat);
-    debugSaveMat(flagMat, "flagMat.jpg");
+    debugSaveMat(flagMat, "outimage/flagMat.jpg");
 }
-
+/*
+ * 函数功能：
+ * 返回标志矩阵
+ */
+Mat CTSkeleton::getFlagMat()
+{
+    return flagMat;
+}
+/*
+ * 函数功能：
+ * 此时只能找三个点，左上方的交叉点没有。。。。
+ */
 bool CTSkeleton::doFindCrossPoints(Mat multiMat, Point startPoint)
 {
-    int count=0;
-    bool flag = true;
+    Point tempPoint = startPoint;
+      int count=0;
 
     while(1)
     {
         count++;
 
-        if(getNeighbourPointNum(multiMat, startPoint) == 0)
-            break;
-        else if(getNeighbourPointNum(multiMat, startPoint) == 1)
+        if(getNeighbourPointNum(multiMat, tempPoint) == 0)
         {
-            flagMat.at<uchar>(startPoint) = 255;
-            startPoint = getNeighbourPoints(multiMat, startPoint)[0];
+            //flagMat.at<uchar>(startPoint) = 255;    //添加了这一句，少了一个交叉点。。。
+            break;
+        }
+        else if(getNeighbourPointNum(multiMat, tempPoint) == 1)
+        {
+            flagMat.at<uchar>(tempPoint) = 255;
+            tempPoint = getNeighbourPoints(multiMat, tempPoint)[0];
         }
         else
         {
-            flagMat.at<uchar>(startPoint) = 255;
-            vector<Point> vecPoint = getNeighbourPoints(multiMat, startPoint);
+            int countPath = 0;
+            flagMat.at<uchar>(tempPoint) = 255;
+            vector<Point> vecPoint = getNeighbourPoints(multiMat, tempPoint);
             for(auto i:vecPoint)
             {
                 flagMat.at<uchar>(i) = 255;
             }
             for(auto i:vecPoint)
             {
-                flag = flag && doFindCrossPoints(multiMat, i);
+                if(doFindCrossPoints(multiMat, i))
+                    countPath++;
             }
-            if(flag)
-                crossVec.push_back(startPoint);
+            if(countPath>1)
+                crossVec.push_back(tempPoint);
             break;
         }
     }
