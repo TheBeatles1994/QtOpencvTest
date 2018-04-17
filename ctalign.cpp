@@ -5,7 +5,6 @@
  * 测试并演示新函数
  * 获取紧密排列 函数名称变为alignMat()
  */
-
 void testAlign()
 {
 #if 1
@@ -84,6 +83,17 @@ void testAlign()
 }
 /*
  * 函数功能：
+ * 测试边缘腐蚀
+ */
+void testShrink()
+{
+    CTShrink shrink;
+    Mat srcMat = imread("doc/10.png");
+
+    shrink.startEdgeShrink(srcMat);
+}
+/*
+ * 函数功能：
  * 显示图片，名称为strName
  */
 void debugShowMat(Mat showMat,string strName)
@@ -107,15 +117,16 @@ void debugSaveMat(Mat saveMat, string saveName)
 void CTShrink::startEdgeShrink(Mat srcMat)
 {
     Mat rstMat = CTAlpha::imageBinarizationThreshold(srcMat);
+    debugShowMat(rstMat);
+    debugSaveMat(rstMat, "outimage/shrink.jpg");
     for (int i=0;i<40;i++)
     {
         imshow("result", rstMat);
-        waitKey();
         Mat tempMat;
         tempMat = edgeShrink(edgeGenerate(backgroundMark(rstMat), foregroundMark(rstMat)));
         rstMat += tempMat;
         debugShowMat(rstMat);
-        cout <<"key"<<endl;
+        debugSaveMat(rstMat, "outimage/shrink.jpg");
     }
 }
 /*

@@ -3,8 +3,8 @@
 
 int main(int argc, char *argv[])
 {
+    //testShrink();
     testSkeleton();
-    //testAlign();
 
     return 0;
 }

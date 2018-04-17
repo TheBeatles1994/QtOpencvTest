@@ -8,7 +8,7 @@ bool compDValue(Point point, vector<Point> vecPoint)
 {
     int min=(-1)>>1;
 
-    for(int i=0;i<vecPoint.size();i++)
+    for(int i=0;i<(int)vecPoint.size();i++)
     {
         Point temp = vecPoint[i];
         int tempDValue = (temp.x-point.x)*(temp.x-point.x) + (temp.y-point.y)*(temp.y-point.y);
@@ -31,6 +31,7 @@ void testSkeleton()
     /* 得到骨骼图像 */
     Mat skeMat= ske.getZhangSkeletonMat(srcMat);        //8UC1
     //debugShowMat(skeMat);
+    debugSaveMat(skeMat,"skeMat.jpg");
     debugSaveMat(skeMat, "outimage/test1.jpg");
     /* 得到距离变换图像 */
     Mat distMat = ske.getDistanceTransformMat(srcMat);  //8UC1
@@ -41,25 +42,25 @@ void testSkeleton()
     //debugShowMat(mulMat,"skeleton");
     //debugSaveMat(mulMat,"outimage/test3.jpg");
     /* 创建标志矩阵 */
-    ske.createFlagMat(mulMat);
+    Mat flagMat = ske.createFlagMat(mulMat);
     /* 找端点 */
-    vector<Point> endVec = ske.findEndPoints();
+    vector<Point> endVec = ske.findEndPoints(flagMat);
     cout <<"end point:"<<endl;
     for(auto i:endVec)
         cout<<i<<endl;
     /* 水滴法测试 */
-//    Mat dropMat = ske.waterDropSegment(distMat, Point(55,70));
-//    debugShowMat(dropMat);
-    //debugSaveMat(dropMat,"outimage/test4.jpg");
+    Mat dropMat = ske.waterDropSegment(distMat, Point(55,70));
+    debugShowMat(dropMat);
+    debugSaveMat(dropMat,"outimage/test4.jpg");
     /* 寻找分叉点坐标 */
     cout <<"cross point:"<<endl;
     vector<Point> crossVec;
-    crossVec = ske.findCrossPoints(endVec[0]);
-    for(int i=1;i<endVec.size();i++)
+
+    crossVec = ske.findCrossPoints(endVec[0], flagMat);
+    for(int i=1;i<(int)endVec.size();i++)
     {
-        ske.createFlagMat(mulMat);
-        vector<Point> crossTempVec = ske.findCrossPoints(endVec[i]);
-        for(int j=0;j<crossTempVec.size();j++)
+        vector<Point> crossTempVec = ske.findCrossPoints(endVec[i], flagMat);
+        for(int j=0;j<(int)crossTempVec.size();j++)
         {
             if(!compDValue(crossTempVec[j], crossVec))
                 crossVec.push_back(crossTempVec[j]);
@@ -67,11 +68,6 @@ void testSkeleton()
     }
     for(auto j:crossVec)
         cout<<j<<" ";
-
-    /* 查看标志矩阵 */
-//    Mat flagMat = ske.getFlagMat();
-//    debugShowMat(flagMat);
-//    debugSaveMat(flagMat, "outimage/flagMatPro.jpg");
 
     return;
 }
@@ -160,7 +156,7 @@ Mat CTSkeleton::multiMats(Mat skeMat, Mat distMat)
  * 函数功能：
  * 寻找端点
  */
-vector<Point> CTSkeleton::findEndPoints()
+vector<Point> CTSkeleton::findEndPoints(Mat flagMat)
 {
     vector<Point> vPoint;
     //除去边缘一圈的点
@@ -170,7 +166,7 @@ vector<Point> CTSkeleton::findEndPoints()
         {
             if((flagMat.at<uchar>(i,j)==0))
             {
-                if(getNeighbourPointNum(Point(j, i)) == 1)
+                if(getNeighbourPointNum(Point(j, i),flagMat) == 1)
                 {
                     vPoint.push_back(Point(j, i));
                 }
@@ -183,9 +179,9 @@ vector<Point> CTSkeleton::findEndPoints()
  * 函数功能：
  * 寻找谷点
  */
-vector<Point> CTSkeleton::findCrossPoints(Point startPoint)
+vector<Point> CTSkeleton::findCrossPoints(Point startPoint, Mat flagMat)
 {
-    doFindCrossPoints(startPoint);
+    doFindCrossPoints(startPoint, flagMat);
     return crossVec;
 }
 /*
@@ -363,36 +359,36 @@ Mat CTSkeleton::waterDropSegment(Mat distMat, Point waterPoint)
 }
 /*
  * 函数功能：
- * 返回一点周围非零点个数
+ * 返回一点周围零点个数
  * 应当针对的是flagMat！
  */
-int CTSkeleton::getNeighbourPointNum(Point point)
+int CTSkeleton::getNeighbourPointNum(Point point, const Mat &flagMat)
 {
-    return (getCrossNeighbourPoints(point).size() + getRCrossNeighbourPoints(point).size());
+    return (getCrossNeighbourPoints(point,flagMat).size() + getRCrossNeighbourPoints(point,flagMat).size());
 }
 /*
  * 函数功能：
- * 返回一点周围非零点
+ * 返回一点周围零点
  */
-vector<Point> CTSkeleton::getNeighbourPoints(Point point)
+vector<Point> CTSkeleton::getNeighbourPoints(Point point, const Mat &flagMat)
 {
     vector<Point> vecPoint, tempVecPoint;
 
-    vecPoint = getCrossNeighbourPoints(point);
-    tempVecPoint = getRCrossNeighbourPoints(point);
+    vecPoint = getCrossNeighbourPoints(point,flagMat);
+    tempVecPoint = getRCrossNeighbourPoints(point,flagMat);
     vecPoint.insert(vecPoint.end(), tempVecPoint.begin(), tempVecPoint.end());
 
     return vecPoint;
 }
 /*
  * 函数功能：
- * 返回一点周围十字的非零点
+ * 返回一点周围十字的零点
  * 应当针对的是flagMat！
  *  1
  * 4 2
  *  3
  */
-vector<Point> CTSkeleton::getCrossNeighbourPoints(Point point)
+vector<Point> CTSkeleton::getCrossNeighbourPoints(Point point, const Mat &flagMat)
 {
     vector<Point> vecPoint;
 
@@ -409,13 +405,13 @@ vector<Point> CTSkeleton::getCrossNeighbourPoints(Point point)
 }
 /*
  * 函数功能：
- * 返回一点周围非十字的非零点
+ * 返回一点周围非十字的零点
  * 应当针对的是flagMat！
  * 1 2
  *
  * 4 3
  */
-vector<Point> CTSkeleton::getRCrossNeighbourPoints(Point point)
+vector<Point> CTSkeleton::getRCrossNeighbourPoints(Point point, const Mat &flagMat)
 {
     vector<Point> vecPoint;
 
@@ -438,7 +434,7 @@ vector<Point> CTSkeleton::getRCrossNeighbourPoints(Point point)
  * 4 2
  *  3
  */
-vector<Point> CTSkeleton::getCrossNeighbourGreyPoints(Point point)
+vector<Point> CTSkeleton::getCrossNeighbourGreyPoints(Point point, const Mat &flagMat)
 {
     vector<Point> vecPoint;
 
@@ -461,7 +457,7 @@ vector<Point> CTSkeleton::getCrossNeighbourGreyPoints(Point point)
  *
  * 4 3
  */
-vector<Point> CTSkeleton::getRCrossNeighbourGreyPoints(Point point)
+vector<Point> CTSkeleton::getRCrossNeighbourGreyPoints(Point point, const Mat &flagMat)
 {
     vector<Point> vecPoint;
 
@@ -481,9 +477,10 @@ vector<Point> CTSkeleton::getRCrossNeighbourGreyPoints(Point point)
  * 创建标志矩阵
  * 在使用寻找端点、分叉点函数前要调用此函数
  */
-void CTSkeleton::createFlagMat(Mat multiMat)
+Mat CTSkeleton::createFlagMat(Mat multiMat)
 {
-    flagMat = Mat::zeros(multiMat.size(), CV_8UC1);
+    Mat flagMat = Mat::zeros(multiMat.size(), CV_8UC1);
+
     for(int i=0;i<multiMat.rows;i++)
     {
         for(int j=0;j<multiMat.cols;j++)
@@ -495,21 +492,14 @@ void CTSkeleton::createFlagMat(Mat multiMat)
     vector<Point>().swap(crossVec);
     //debugShowMat(flagMat);
     debugSaveMat(flagMat, "outimage/flagMat.jpg");
-}
-/*
- * 函数功能：
- * 返回标志矩阵
- */
-Mat CTSkeleton::getFlagMat()
-{
+
     return flagMat;
 }
 /*
  * 函数功能：
- * 此时只能找三个点，右上方的交叉点没有。。。。
  * 改变函数，先找十字点，没有十字点的话找非十字点
  */
-bool CTSkeleton::doFindCrossPoints(Point startPoint)
+bool CTSkeleton::doFindCrossPoints(Point startPoint, Mat &flagMat)
 {
     Point tempPoint = startPoint;
     int count=0;
@@ -520,7 +510,7 @@ bool CTSkeleton::doFindCrossPoints(Point startPoint)
 
         count++;
         /* 是否到端点 */
-        if(getNeighbourPointNum(tempPoint) == 0)
+        if(getNeighbourPointNum(tempPoint,flagMat) == 0)
         {
             break;      //先保留端点值
         }
@@ -530,24 +520,24 @@ bool CTSkeleton::doFindCrossPoints(Point startPoint)
                 flagMat.at<uchar>(tempPoint) = 255;
         }
         /* 是否只有一条路 */
-        if(getNeighbourPointNum(tempPoint) == 1)
+        if(getNeighbourPointNum(tempPoint,flagMat) == 1)
         {
-            tempPoint = getNeighbourPoints(tempPoint)[0]; //更新tempPoint
+            tempPoint = getNeighbourPoints(tempPoint,flagMat)[0]; //更新tempPoint
             continue;
         }
         /* 标记周围超过两个点的灰度值为128 */
-        vector<Point> tempVecPoint = getNeighbourPoints(tempPoint);
+        vector<Point> tempVecPoint = getNeighbourPoints(tempPoint,flagMat);
         for(auto i:tempVecPoint)
         {
             flagMat.at<uchar>(i) = (uchar)128;         //周围超过两点的，周围点标记为128
         }
         /* 十字方向上是否有路 */
-        tempVecPoint = getCrossNeighbourGreyPoints(tempPoint);
+        tempVecPoint = getCrossNeighbourGreyPoints(tempPoint,flagMat);
         if(!tempVecPoint.empty())
         {
             for(auto i:tempVecPoint)
             {
-                if(doFindCrossPoints(i))
+                if(doFindCrossPoints(i, flagMat))
                     countPath++;
             }
             for(auto i:tempVecPoint)
@@ -557,12 +547,12 @@ bool CTSkeleton::doFindCrossPoints(Point startPoint)
             }
         }
         /* 非十字方向上是否有路 */
-        tempVecPoint = getRCrossNeighbourGreyPoints(tempPoint);
+        tempVecPoint = getRCrossNeighbourGreyPoints(tempPoint,flagMat);
         if(!tempVecPoint.empty())
         {
             for(auto i:tempVecPoint)
             {
-                if(doFindCrossPoints(i))
+                if(doFindCrossPoints(i, flagMat))
                     countPath++;
                 for(auto i:tempVecPoint)
                 {
@@ -674,4 +664,20 @@ Mat CTSkeleton::imageBinarizationBorW(Mat srcMat)
     greyMat = imageBinarizationThreshold(srcMat);
     threshold(greyMat, greyMat, 0, 255, CV_THRESH_BINARY_INV);
     return greyMat;
+}
+/*
+ * 函数功能：
+ * 开始寻找路径
+ */
+void CrossPoint::findPath()
+{
+
+}
+/*
+ * 函数功能：
+ *
+ */
+bool CrossPoint::doFindPath(Point startPoint, Mat &flagMat)
+{
+
 }

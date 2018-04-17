@@ -106,6 +106,7 @@ private:
 
 
 void testAlign();                                               //测试紧密排列
+void testShrink();                                              //测试边缘腐蚀
 void debugShowMat(Mat showMat,string strName = "debug");        //显示图片
 void debugSaveMat(Mat saveMat,string saveName = "saveMat.png"); //保存图片
 
