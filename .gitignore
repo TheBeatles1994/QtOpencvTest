@@ -12,3 +12,8 @@ object_script.*
 version.h
 ±¸×¢.md
 outimage/
+imgs_test/
+*.vsdx
+*.png
+*.jpg
+*.ini

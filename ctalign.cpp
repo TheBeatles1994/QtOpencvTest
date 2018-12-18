@@ -1,5 +1,11 @@
 #include "ctalign.h"
 
+/* 设置背景是否要透明 */
+// 在函数removeEdge和vecPointToMat处有使用
+#define ISALPHA false
+/* 设置背景是否要为白色 */
+#define ISBLACK true
+
 /*
  * 函数功能：
  * 测试并演示新函数
@@ -241,7 +247,11 @@ Mat CTRotate::removeEdge(Mat srcMat)
 
     Mat greyMat = CTAlpha::imageBinarizationBorW(srcMat);
     vector<Point> vecPoint = CTContour::findImageContours(greyMat)[0];   //寻找边缘点集
-    Mat tempMat = CTContour::vecPointToMat(srcMat, vecPoint,0,0);
+    Mat tempMat;
+    if(ISALPHA)
+        tempMat = CTContour::vecPointToMat(srcMat, vecPoint,0,0);
+    else
+        tempMat = CTContour::vecPointToMat(srcMat, vecPoint,255,0);
     return tempMat;
 }
 /*
@@ -399,8 +409,10 @@ Mat CTAlpha::getAlphaPic(Mat srcMat)
     vector<vector<Point> > vecVecPoint;
     Mat greyMat = imageBinarizationBorW(srcMat);
     vecVecPoint = CTContour::findImageContours(greyMat);
+    if(ISALPHA)
+        return CTContour::vecPointToMat(srcMat, vecVecPoint[0],0,8);
 
-    return CTContour::vecPointToMat(srcMat, vecVecPoint[0],0,8);
+    return CTContour::vecPointToMat(srcMat, vecVecPoint[0],255,8);
 }
 /*
  * 函数功能：
@@ -465,6 +477,36 @@ Mat CTRotate::getRotateMat(Mat srcMat, float degree)
     //debugShowMat(matUpRight);
     debugSaveMat(matUpRight,"matUpRight.jpg");
     debugSaveMat(matUpRight,"matUpRight.png");
+
+    return removeEdge(matUpRight);
+}
+/* ===================================================================
+ * @函数功能: 将种子转到相对degree角度
+ * @输入参数: srcMat为原图，degree为转动的相对角度
+ * @输出参数: 转动后的图
+ * @注意事项:
+ *      无
+   ===================================================================
+ */
+Mat CTRotate::getRelativeRotateMat(Mat srcMat, float degree)
+{
+    assert(srcMat.channels() ==3 || srcMat.channels()==4);
+
+    srcMat = quadrateMat(srcMat,4);                                               //使原图长宽相等
+
+    double angle = degree * CV_PI / 180.;                                       //计算弧度
+    double dsin = sin(angle), dcos = cos(angle);                                //计算正余弦
+    int width = srcMat.rows;                                                    //原图宽
+    int height = srcMat.cols;                                                   //原图高
+    float width_rotate= height*1.0 * fabs(dsin) + width*1.0 * fabs(dcos);            //旋转后图像的宽度
+    float height_rotate=width*1.0 * fabs(dsin) + height*1.0 * fabs(dcos);            //旋转后图像的高度
+
+    Mat matUpRight(Size(width_rotate,height_rotate),CV_8UC4,Scalar(255,255,255,0));                   //旋转后的图像
+    Mat rMat = getRotationMatrix2D(Point2f(width*1.0/2,height*1.0/2),degree,1);         //得到旋转矩阵
+    rMat.at<double>(0,2) += (width_rotate - width) / 2;                         //水平方向平移量
+    rMat.at<double>(1,2) += (height_rotate - height) / 2;                       //竖直方向平移量
+    warpAffine(srcMat,matUpRight,rMat,Size(matUpRight.rows,matUpRight.cols),
+               INTER_LINEAR,BORDER_REPLICATE);                                  //进行旋转，最后一个参数是边缘处理方式，此处采用的是边缘复制
 
     return removeEdge(matUpRight);
 }
@@ -707,4 +749,38 @@ void CTAlign::setAlignMat(Mat srcMat, int x, int y)
     assert(x<vecMats.size());
     assert(y<vecMats[x].size());
     vecMats[x][y] = srcMat;
+}
+
+void testDataAugmentation()
+{
+    Mat srcMat1 = imread("D://135.png");
+
+    shared_ptr<CTAlpha> alpha = make_shared<CTAlpha>();
+    Mat alphaMat1 = alpha->getAlphaPic(srcMat1);
+    shared_ptr<CTRotate> rotate = make_shared<CTRotate>();
+
+    Mat rotateMat1 = rotate->getRelativeRotateMat(alphaMat1, 45);
+    Mat rotateMat2 = rotate->getRelativeRotateMat(alphaMat1, 90);
+    Mat rotateMat3 = rotate->getRelativeRotateMat(alphaMat1, 135);
+    Mat rotateMat4 = rotate->getRelativeRotateMat(alphaMat1, 180);
+    Mat rotateMat5 = rotate->getRelativeRotateMat(alphaMat1, 225);
+    Mat rotateMat6 = rotate->getRelativeRotateMat(alphaMat1, 270);
+    Mat rotateMat7 = rotate->getRelativeRotateMat(alphaMat1, 315);
+
+    //Mat mirrorMat1 = rotate->getMirrorMat(rotateMat1, CTRotate::MIRRORX);
+    //Mat mirrorMat2 = rotate->getMirrorMat(rotateMat2, CTRotate::MIRRORY);
+
+    //debugShowMat(rotateMat1);
+    //debugShowMat(rotateMat2);
+    //debugShowMat(mirrorMat1);
+    //debugShowMat(mirrorMat2);
+    debugSaveMat(rotateMat1,"rotateMat1.png");
+    debugSaveMat(rotateMat2,"rotateMat2.png");
+    debugSaveMat(rotateMat3,"rotateMat3.png");
+    debugSaveMat(rotateMat4,"rotateMat4.png");
+    debugSaveMat(rotateMat5,"rotateMat5.png");
+    debugSaveMat(rotateMat6,"rotateMat6.png");
+    debugSaveMat(rotateMat7,"rotateMat7.png");
+    //debugSaveMat(mirrorMat1,"mirrorMat1.png");
+    //debugSaveMat(mirrorMat2,"mirrorMat2.png");
 }

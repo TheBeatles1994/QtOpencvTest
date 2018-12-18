@@ -64,7 +64,8 @@ public:
         MIRRORXY = -1
     };
 public:
-    Mat getRotateMat(Mat srcMat, float degree = 0);                 //将种子转到固定degree角度(自动将种子变垂直，用到了uprightMat函数)
+    Mat getRotateMat(Mat srcMat, float degree = 0);                 //将种子转到绝对degree角度(自动将种子变垂直，用到了uprightMat函数)
+    Mat getRelativeRotateMat(Mat srcMat, float degree = 0);         //将种子转到相对degree角度
     Mat panningMat(Mat srcMat, Mat &dstMat, float x, float y);      //使种子图片移动到dstMat图的目标位置
     Mat getMirrorMat(Mat srcMat, int type);                         //镜像变换
 private:
@@ -107,6 +108,7 @@ private:
 
 void testAlign();                                               //测试紧密排列
 void testShrink();                                              //测试边缘腐蚀
+void testDataAugmentation();                                    //测试数据增广函数
 void debugShowMat(Mat showMat,string strName = "debug");        //显示图片
 void debugSaveMat(Mat saveMat,string saveName = "saveMat.png"); //保存图片
 

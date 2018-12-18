@@ -25,8 +25,8 @@ bool compDValue(Point point, vector<Point> vecPoint)
 void testSkeleton()
 {
     /* 读取原图片 */
-    Mat srcMat = imread("doc/10.png");  //8UC3
-    //debugShowMat(srcMat);
+    Mat srcMat = imread("imgs_test/origin2.jpg");  //8UC3
+    debugShowMat(srcMat);
     CTSkeleton ske;
     /* 得到骨骼图像 */
     Mat skeMat= ske.getZhangSkeletonMat(srcMat);        //8UC1
@@ -112,6 +112,7 @@ Mat CTSkeleton::preTreatmentMat(Mat srcMat)
 {
     assert(srcMat.channels() == 3 ||srcMat.channels()==4);
     Mat outputImage = imageBinarizationBorW(srcMat);    //输出8UC1
+    //Mat outputImage = imageBinarizationBorW(outputImagetemp);    //输出8UC1
     /* 图像预处理，先去掉种子内部的白点 */
     /* 先找到包络，去掉边缘毛刺 */
 //    vector<Point> vPoint = CTContour::findImageContours(outputImage)[0];
@@ -502,7 +503,7 @@ Mat CTSkeleton::createFlagMat(Mat multiMat)
 bool CTSkeleton::doFindCrossPoints(Point startPoint, Mat &flagMat)
 {
     Point tempPoint = startPoint;
-    int count=0;
+    int count=0;    //作用是判断是一条路，而非一个点
 
     while(1)
     {
@@ -662,7 +663,7 @@ Mat CTSkeleton::imageBinarizationBorW(Mat srcMat)
     assert(srcMat.channels() == 3||srcMat.channels() == 4);
     Mat greyMat;
     greyMat = imageBinarizationThreshold(srcMat);
-    threshold(greyMat, greyMat, 0, 255, CV_THRESH_BINARY_INV);
+    //threshold(greyMat, greyMat, 0, 255, CV_THRESH_BINARY_INV);
     return greyMat;
 }
 /*

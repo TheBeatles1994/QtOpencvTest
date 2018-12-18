@@ -4,7 +4,10 @@
 int main(int argc, char *argv[])
 {
     //testShrink();
-    testSkeleton();
+    //testSkeleton();
+    testDataAugmentation();
+
+    cout<<"Finished!"<<endl;
 
     return 0;
 }
