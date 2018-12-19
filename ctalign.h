@@ -31,7 +31,7 @@ class CTAlpha
     friend class CTShrink;
 public:
     Mat getAlphaPic(vector<Point> vecPoint);                    //得到透明种子Mat，输入为边缘点集
-    Mat getAlphaPic(Mat srcMat);                                //得到透明种子Mat，输入为Mat
+    Mat getAlphaPic(Mat srcMat, int alpha);                                //得到透明种子Mat，输入为Mat
 private:
     static Mat imageBinarizationThreshold(Mat srcMat);          //种子图像二值化,种子是黑色，背景是白色
     static Mat imageBinarizationBorW(Mat srcMat);               //种子图像二值化,非黑变黑，黑变白
@@ -44,7 +44,7 @@ public:
     static vector<vector<Point> > findImageContours(Mat greyMat);                               //寻找图像中的边缘点集
     static Mat vecPointToMat(vector<Point> vecPoint, int red, int green, int blue,int edgeSpacing);             //将特定的点集变为Mat，背景为白色，点集内为指定色
     static Mat vecPointToMat(vector<Point> vecPoint, int red, int green, int blue, int alpha,int edgeSpacing);  //将特定的点集变为Mat，背景为透明色(由alpha参数决定，越高越透明)
-    static Mat vecPointToMat(Mat srcMat, vector<Point> vecPoint, int alpha,int edgeSpacing);                    //将特定的点集变为Mat，种子为原图颜色
+    static Mat vecPointToMat(Mat srcMat, vector<Point> vecPoint, Scalar backColor, int alpha, int edgeSpacing);                    //将特定的点集变为Mat，种子为原图颜色
 };
 /* 旋转操作类 */
 class CTRotate
@@ -64,15 +64,15 @@ public:
         MIRRORXY = -1
     };
 public:
-    Mat getRotateMat(Mat srcMat, float degree = 0);                 //将种子转到绝对degree角度(自动将种子变垂直，用到了uprightMat函数)
-    Mat getRelativeRotateMat(Mat srcMat, float degree = 0);         //将种子转到相对degree角度
+    Mat getRotateMat(Mat srcMat, float degree, int alpha = 0);                 //将种子转到绝对degree角度(自动将种子变垂直，用到了uprightMat函数)
+    Mat getRelativeRotateMat(Mat srcMat, float degree, int alpha);         //将种子转到相对degree角度
     Mat panningMat(Mat srcMat, Mat &dstMat, float x, float y);      //使种子图片移动到dstMat图的目标位置
     Mat getMirrorMat(Mat srcMat, int type);                         //镜像变换
 private:
     Mat quadrateMat(Mat srcMat,int spacing=0);                      //使种子图片变成正方形
     float getRotateMatDegree(Mat srcMat);                           //得到种子图片计算后的旋转角度
     float getRotateUprightDegree(RotatedRect calculatedRect);       //得到使旋转矩形竖直向垂直的角度
-    Mat removeEdge(Mat srcMat);                                     //去除图片边缘空隙
+    Mat removeEdge(Mat srcMat, int alpha);                                     //去除图片边缘空隙
 };
 /* 紧密排列类 */
 class CTAlign
@@ -108,7 +108,7 @@ private:
 
 void testAlign();                                               //测试紧密排列
 void testShrink();                                              //测试边缘腐蚀
-void testDataAugmentation();                                    //测试数据增广函数
+void testDataAugmentation(Mat srcMat, Mat labelMat);                                    //测试数据增广函数
 void debugShowMat(Mat showMat,string strName = "debug");        //显示图片
 void debugSaveMat(Mat saveMat,string saveName = "saveMat.png"); //保存图片
 

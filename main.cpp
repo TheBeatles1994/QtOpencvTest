@@ -3,9 +3,11 @@
 
 int main(int argc, char *argv[])
 {
+    Mat srcMat = imread("img.png");
+    Mat labelMat;
     //testShrink();
     //testSkeleton();
-    testDataAugmentation();
+    testDataAugmentation(srcMat, labelMat);
     //testAlign();
 
     cout<<"Finished!"<<endl;

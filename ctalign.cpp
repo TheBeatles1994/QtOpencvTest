@@ -241,7 +241,7 @@ Mat CTShrink::edgeGenerate(Mat back, Mat fore)
  * 去除图片边缘空隙
  * 输入：正方形白色透明背景黑色种子图片
  */
-Mat CTRotate::removeEdge(Mat srcMat)
+Mat CTRotate::removeEdge(Mat srcMat, int alpha)
 {
     assert(srcMat.channels() ==3 || srcMat.channels()==4);
 
@@ -252,10 +252,7 @@ Mat CTRotate::removeEdge(Mat srcMat)
     //debugShowMat(greyMat);
     vector<Point> vecPoint = CTContour::findImageContours(greyMat)[0];   //寻找边缘点集
     Mat tempMat;
-    if(ISALPHA)
-        tempMat = CTContour::vecPointToMat(srcMat, vecPoint,0,5);
-    else
-        tempMat = CTContour::vecPointToMat(srcMat, vecPoint,255,5);
+    tempMat = CTContour::vecPointToMat(srcMat, vecPoint,Scalar(0,0,0), alpha,5);
     return tempMat;
 }
 /*
@@ -347,7 +344,7 @@ Mat CTContour::vecPointToMat(vector<Point> vecPoint, int red, int green, int blu
  * 背景默认色为白色
  * 无空隙
  */
-Mat CTContour::vecPointToMat(Mat srcMat, vector<Point> vecPoint, int alpha,int edgeSpacing)
+Mat CTContour::vecPointToMat(Mat srcMat, vector<Point> vecPoint, Scalar backColor,int alpha,int edgeSpacing)
 {
     assert(srcMat.channels() == 3||srcMat.channels() == 4);
 
@@ -358,10 +355,7 @@ Mat CTContour::vecPointToMat(Mat srcMat, vector<Point> vecPoint, int alpha,int e
     rect.height += edgeSpacing*2;
 
     Mat tempMat;
-    if(ISALPHA)
-        tempMat = Mat(rect.size(), CV_8UC4, Scalar(0, 0, 0,0));
-    else
-        tempMat = Mat(rect.size(), CV_8UC4, Scalar(0, 0, 0,255));
+    tempMat = Mat(rect.size(), CV_8UC4, Scalar(0, 0, 0,alpha));
 
     for (int row = edgeSpacing; row < tempMat.rows-edgeSpacing; row++)
     {
@@ -388,9 +382,9 @@ Mat CTContour::vecPointToMat(Mat srcMat, vector<Point> vecPoint, int alpha,int e
             }
             else
             {
-                tempMat.at<Vec4b>(row, col)[0] = 0;
-                tempMat.at<Vec4b>(row, col)[1] = 0;
-                tempMat.at<Vec4b>(row, col)[2] = 0;
+                tempMat.at<Vec4b>(row, col)[0] = backColor[0];
+                tempMat.at<Vec4b>(row, col)[1] = backColor[1];
+                tempMat.at<Vec4b>(row, col)[2] = backColor[2];
                 tempMat.at<Vec4b>(row, col)[3] = alpha;
             }
         }
@@ -414,19 +408,15 @@ Mat CTAlpha::getAlphaPic(vector<Point> vecPoint)
  * 输入三通道或四通道Mat
  * 输出原种子，同时还有透明背景（默认背景是白色，种子是暗色）
  */
-Mat CTAlpha::getAlphaPic(Mat srcMat)
+Mat CTAlpha::getAlphaPic(Mat srcMat, int alpha)
 {
     vector<vector<Point> > vecVecPoint;
-    //Mat greyMat = imageBinarizationBorW(srcMat);
     Mat greyMat;
     cvtColor(srcMat, greyMat, CV_BGR2GRAY);
     threshold(greyMat, greyMat, 45, 255, CV_THRESH_BINARY);
-    //debugShowMat(greyMat);
     vecVecPoint = CTContour::findImageContours(greyMat);
-    if(ISALPHA)
-        return CTContour::vecPointToMat(srcMat, vecVecPoint[0],0,2);
 
-    return CTContour::vecPointToMat(srcMat, vecVecPoint[0],255,2);
+    return CTContour::vecPointToMat(srcMat, vecVecPoint[0],Scalar(0,0,0), alpha,2);
 }
 /*
  * 函数功能：
@@ -467,7 +457,7 @@ Mat CTAlpha::imageBinarizationBorW(Mat srcMat)
  * 注意，之前的问题没有解决，即如果不是长宽相等的图片，结果会出错，要么少了头，要么少了尾
  * 现在的解决思路是使原图长宽相等
  */
-Mat CTRotate::getRotateMat(Mat srcMat, float degree)
+Mat CTRotate::getRotateMat(Mat srcMat, float degree, int alpha)
 {
     assert(srcMat.channels() ==3 || srcMat.channels()==4);
 
@@ -481,7 +471,7 @@ Mat CTRotate::getRotateMat(Mat srcMat, float degree)
     float width_rotate= height*1.0 * fabs(dsin) + width*1.0 * fabs(dcos);            //旋转后图像的宽度
     float height_rotate=width*1.0 * fabs(dsin) + height*1.0 * fabs(dcos);            //旋转后图像的高度
 
-    Mat matUpRight(Size(width_rotate,height_rotate),CV_8UC4,Scalar(0,0,0,0));                   //旋转后的图像
+    Mat matUpRight(Size(width_rotate,height_rotate),CV_8UC4,Scalar(0,0,0,alpha));                   //旋转后的图像
     Mat rMat = getRotationMatrix2D(Point2f(width*1.0/2,height*1.0/2),degree,1);         //得到旋转矩阵
     rMat.at<double>(0,2) += (width_rotate - width) / 2;                         //水平方向平移量
     rMat.at<double>(1,2) += (height_rotate - height) / 2;                       //竖直方向平移量
@@ -492,7 +482,7 @@ Mat CTRotate::getRotateMat(Mat srcMat, float degree)
     debugSaveMat(matUpRight,"matUpRight.jpg");
     debugSaveMat(matUpRight,"matUpRight.png");
 
-    return removeEdge(matUpRight);
+    return removeEdge(matUpRight, alpha);
 }
 /* ===================================================================
  * @函数功能: 将种子转到相对degree角度
@@ -502,7 +492,7 @@ Mat CTRotate::getRotateMat(Mat srcMat, float degree)
  *      无
    ===================================================================
  */
-Mat CTRotate::getRelativeRotateMat(Mat srcMat, float degree)
+Mat CTRotate::getRelativeRotateMat(Mat srcMat, float degree, int alpha)
 {
     assert(srcMat.channels() ==3 || srcMat.channels()==4);
 
@@ -515,7 +505,7 @@ Mat CTRotate::getRelativeRotateMat(Mat srcMat, float degree)
     float width_rotate= height*1.0 * fabs(dsin) + width*1.0 * fabs(dcos);            //旋转后图像的宽度
     float height_rotate=width*1.0 * fabs(dsin) + height*1.0 * fabs(dcos);            //旋转后图像的高度
 
-    Mat matUpRight(Size(width_rotate,height_rotate),CV_8UC4,Scalar(0,0,0,255));                   //旋转后的图像
+    Mat matUpRight(Size(width_rotate,height_rotate),CV_8UC4,Scalar(0,0,0,alpha));                   //旋转后的图像
     Mat rMat = getRotationMatrix2D(Point2f(width*1.0/2,height*1.0/2),degree,1);         //得到旋转矩阵
     rMat.at<double>(0,2) += (width_rotate - width) / 2;                         //水平方向平移量
     rMat.at<double>(1,2) += (height_rotate - height) / 2;                       //竖直方向平移量
@@ -524,7 +514,7 @@ Mat CTRotate::getRelativeRotateMat(Mat srcMat, float degree)
 
     //debugShowMat(matUpRight);
 
-    return removeEdge(matUpRight);
+    return removeEdge(matUpRight, alpha);
 }
 /*
  * 函数功能：
@@ -767,22 +757,22 @@ void CTAlign::setAlignMat(Mat srcMat, int x, int y)
     vecMats[x][y] = srcMat;
 }
 
-void testDataAugmentation()
+void testDataAugmentation(Mat srcMat, Mat labelMat)
 {
-    Mat srcMat1 = imread("FB 013_162.jpg");
+    int alphaV = 255;
 
     shared_ptr<CTAlpha> alpha = make_shared<CTAlpha>();
-    Mat alphaMat1 = alpha->getAlphaPic(srcMat1);
+    Mat alphaMat1 = alpha->getAlphaPic(srcMat, alphaV);
+
     shared_ptr<CTRotate> rotate = make_shared<CTRotate>();
     //debugShowMat(alphaMat1);
-
-    Mat rotateMat1 = rotate->getRelativeRotateMat(alphaMat1, 45);
-    Mat rotateMat2 = rotate->getRelativeRotateMat(alphaMat1, 90);
-    Mat rotateMat3 = rotate->getRelativeRotateMat(alphaMat1, 135);
-    Mat rotateMat4 = rotate->getRelativeRotateMat(alphaMat1, 180);
-    Mat rotateMat5 = rotate->getRelativeRotateMat(alphaMat1, 225);
-    Mat rotateMat6 = rotate->getRelativeRotateMat(alphaMat1, 270);
-    Mat rotateMat7 = rotate->getRelativeRotateMat(alphaMat1, 315);
+    Mat rotateMat1 = rotate->getRelativeRotateMat(alphaMat1, 45, alphaV);
+    Mat rotateMat2 = rotate->getRelativeRotateMat(alphaMat1, 90, alphaV);
+    Mat rotateMat3 = rotate->getRelativeRotateMat(alphaMat1, 135, alphaV);
+    Mat rotateMat4 = rotate->getRelativeRotateMat(alphaMat1, 180, alphaV);
+    Mat rotateMat5 = rotate->getRelativeRotateMat(alphaMat1, 225, alphaV);
+    Mat rotateMat6 = rotate->getRelativeRotateMat(alphaMat1, 270, alphaV);
+    Mat rotateMat7 = rotate->getRelativeRotateMat(alphaMat1, 315, alphaV);
 
     //Mat mirrorMat1 = rotate->getMirrorMat(rotateMat1, CTRotate::MIRRORX);
     //Mat mirrorMat2 = rotate->getMirrorMat(rotateMat2, CTRotate::MIRRORY);
