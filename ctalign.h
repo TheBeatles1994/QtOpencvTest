@@ -69,7 +69,7 @@ public:
     Mat panningMat(Mat srcMat, Mat &dstMat, float x, float y);      //使种子图片移动到dstMat图的目标位置
     Mat getMirrorMat(Mat srcMat, int type);                         //镜像变换
 private:
-    Mat quadrateMat(Mat srcMat,int spacing=0);                                    //使种子图片变成正方形
+    Mat quadrateMat(Mat srcMat,int spacing=0);                      //使种子图片变成正方形
     float getRotateMatDegree(Mat srcMat);                           //得到种子图片计算后的旋转角度
     float getRotateUprightDegree(RotatedRect calculatedRect);       //得到使旋转矩形竖直向垂直的角度
     Mat removeEdge(Mat srcMat);                                     //去除图片边缘空隙

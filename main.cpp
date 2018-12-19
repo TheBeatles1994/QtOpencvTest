@@ -6,6 +6,7 @@ int main(int argc, char *argv[])
     //testShrink();
     //testSkeleton();
     testDataAugmentation();
+    //testAlign();
 
     cout<<"Finished!"<<endl;
 
