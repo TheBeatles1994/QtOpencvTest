@@ -4,7 +4,7 @@
 int main(int argc, char *argv[])
 {
     Mat srcMat = imread("img.png");
-    Mat labelMat;
+    Mat labelMat = imread("label.png");
     //testShrink();
     //testSkeleton();
     testDataAugmentation(srcMat, labelMat);

@@ -66,6 +66,7 @@ public:
 public:
     Mat getRotateMat(Mat srcMat, float degree, int alpha = 0);                 //将种子转到绝对degree角度(自动将种子变垂直，用到了uprightMat函数)
     Mat getRelativeRotateMat(Mat srcMat, float degree, int alpha);         //将种子转到相对degree角度
+    Mat getRelativeRotateMatAndLabel(Mat srcMat, Mat labelMat, float degree, int alpha);
     Mat panningMat(Mat srcMat, Mat &dstMat, float x, float y);      //使种子图片移动到dstMat图的目标位置
     Mat getMirrorMat(Mat srcMat, int type);                         //镜像变换
 private:
@@ -73,6 +74,7 @@ private:
     float getRotateMatDegree(Mat srcMat);                           //得到种子图片计算后的旋转角度
     float getRotateUprightDegree(RotatedRect calculatedRect);       //得到使旋转矩形竖直向垂直的角度
     Mat removeEdge(Mat srcMat, int alpha);                                     //去除图片边缘空隙
+    Mat removeEdge(Mat srcMat, Mat labelMat, int alpha);
 };
 /* 紧密排列类 */
 class CTAlign

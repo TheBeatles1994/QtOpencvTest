@@ -257,6 +257,40 @@ Mat CTRotate::removeEdge(Mat srcMat, int alpha)
 }
 /*
  * 函数功能：
+ * 去除图片边缘空隙
+ * 输入：正方形白色透明背景黑色种子图片
+ */
+Mat CTRotate::removeEdge(Mat srcMat, Mat labelMat, int alpha)
+{
+    assert(srcMat.channels() ==3 || srcMat.channels()==4);
+
+    //Mat greyMat = CTAlpha::imageBinarizationBorW(srcMat);
+    Mat greyMat;
+    cvtColor(srcMat, greyMat, CV_BGR2GRAY);
+    threshold(greyMat, greyMat, 4, 255, CV_THRESH_BINARY);
+    vector<Point> vecPoint = CTContour::findImageContours(greyMat)[0];   //寻找边缘点集
+    Mat tempMat;
+    tempMat = CTContour::vecPointToMat(srcMat, vecPoint,Scalar(0,0,0), alpha,5);
+
+    Mat greyLabelMat;
+    cvtColor(labelMat, greyLabelMat, CV_BGR2GRAY);
+    threshold(greyLabelMat, greyLabelMat, 0, 255, CV_THRESH_BINARY);
+    vector<Point> vecLabelPoint = CTContour::findImageContours(greyLabelMat)[0];   //寻找边缘点集
+    Mat tempLabelMat;
+    tempLabelMat = CTContour::vecPointToMat(labelMat, vecLabelPoint,Scalar(0,0,0), alpha,5);
+    debugShowMat(tempLabelMat);
+
+//    int xdiff = (labelMat.cols - tempMat.cols)/2;
+//    int ydiff = (labelMat.rows - tempMat.rows)/2;
+    //debugShowMat(tempMat);
+//    Mat newLabel = labelMat(Rect(xdiff, ydiff, tempMat.cols, tempMat.rows));
+//    debugSaveMat(tempMat, "_tempMat.png");
+//    debugSaveMat(labelMat, "_labelMat.png");
+//    debugSaveMat(newLabel, "_newLabel.png");
+    return tempMat;
+}
+/*
+ * 函数功能：
  * 寻找图像中的边缘点集
  * 输入必须是灰度图，一通道
  */
@@ -516,6 +550,43 @@ Mat CTRotate::getRelativeRotateMat(Mat srcMat, float degree, int alpha)
 
     return removeEdge(matUpRight, alpha);
 }
+/* ===================================================================
+ * @函数功能: 将种子转到相对degree角度
+ * @输入参数: srcMat为原图，degree为逆时针转动的相对角度
+ * @输出参数: 转动后的图
+ * @注意事项:
+ *      无
+   ===================================================================
+ */
+Mat CTRotate::getRelativeRotateMatAndLabel(Mat srcMat, Mat labelMat, float degree, int alpha)
+{
+    assert(srcMat.channels() ==3 || srcMat.channels()==4);
+
+    srcMat = quadrateMat(srcMat,4);                                               //使原图长宽相等
+    //debugShowMat(labelMat);
+    labelMat = quadrateMat(labelMat,4);
+    //cout<<srcMat.channels()<<" "<<labelMat.channels()<<endl;
+    double angle = degree * CV_PI / 180.;                                       //计算弧度
+    double dsin = sin(angle), dcos = cos(angle);                                //计算正余弦
+    int width = srcMat.rows;                                                    //原图宽
+    int height = srcMat.cols;                                                   //原图高
+    float width_rotate= height*1.0 * fabs(dsin) + width*1.0 * fabs(dcos);            //旋转后图像的宽度
+    float height_rotate=width*1.0 * fabs(dsin) + height*1.0 * fabs(dcos);            //旋转后图像的高度
+
+    Mat matUpRight(Size(width_rotate,height_rotate),CV_8UC4,Scalar(0,0,0,alpha));                   //旋转后的图像
+    Mat matUpRightLabel(Size(width_rotate,height_rotate),CV_8UC4,Scalar(0,0,0,alpha));                   //旋转后的图像
+    Mat rMat = getRotationMatrix2D(Point2f(width*1.0/2,height*1.0/2),degree,1);         //得到旋转矩阵
+    rMat.at<double>(0,2) += (width_rotate - width) / 2;                         //水平方向平移量
+    rMat.at<double>(1,2) += (height_rotate - height) / 2;                       //竖直方向平移量
+    warpAffine(srcMat,matUpRight,rMat,Size(matUpRight.rows,matUpRight.cols),
+               INTER_LINEAR,BORDER_REPLICATE);                                  //进行旋转，最后一个参数是边缘处理方式，此处采用的是边缘复制
+    warpAffine(labelMat,matUpRightLabel,rMat,Size(matUpRightLabel.rows,matUpRightLabel.cols),
+               INTER_LINEAR,BORDER_REPLICATE);                                  //进行旋转，最后一个参数是边缘处理方式，此处采用的是边缘复制
+    debugSaveMat(matUpRight);
+    debugSaveMat(matUpRightLabel);
+
+    return removeEdge(matUpRight, matUpRightLabel, alpha);
+}
 /*
  * 函数功能：
  * 使种子图片变成正方形
@@ -526,8 +597,13 @@ Mat CTRotate::quadrateMat(Mat srcMat, int spacing)
     assert(srcMat.channels() ==3 || srcMat.channels()==4);
     int quaLenOfSide = (srcMat.rows>srcMat.cols?srcMat.rows:srcMat.cols)+spacing*2;                       //左右上下各添加2个像素
 
-    Mat matQua(Size(quaLenOfSide,quaLenOfSide),CV_8UC4,Scalar(0,0,0,255));                      //旋转后的图像
-    panningMat(srcMat,matQua,(quaLenOfSide-srcMat.cols)/2.0+spacing,(quaLenOfSide-srcMat.rows)/2.0)+spacing;    //图像平移
+    Mat matQua;
+    if(srcMat.channels() == 4)
+        matQua = Mat(Size(quaLenOfSide,quaLenOfSide),CV_8UC4,Scalar(0,0,0,255));                      //旋转后的图像
+    else
+        matQua = Mat(Size(quaLenOfSide,quaLenOfSide),CV_8UC3,Scalar(0,0,0));                      //旋转后的图像
+    //cout<<srcMat.channels()<<endl;
+    panningMat(srcMat,matQua,(quaLenOfSide-srcMat.cols)/2.0+spacing,(quaLenOfSide-srcMat.rows)/2.0+spacing);    //图像平移
 
     return matQua;
 }
@@ -537,9 +613,14 @@ Mat CTRotate::quadrateMat(Mat srcMat, int spacing)
  */
 Mat CTRotate::panningMat(Mat srcMat, Mat &dstMat, float x, float y)
 {
+    //debugShowMat(dstMat);
     Mat dstRoi = dstMat(Rect(x,y, srcMat.cols, srcMat.rows));
+    //debugShowMat(srcMat);
     srcMat.copyTo(dstRoi);
 
+    cout<<srcMat.channels()<<" "<<dstMat.channels()<<" "<<dstRoi.channels()<<endl;
+    //debugShowMat(dstRoi);
+    //debugShowMat(dstMat);
     return dstMat;
 }
 /*
@@ -766,13 +847,13 @@ void testDataAugmentation(Mat srcMat, Mat labelMat)
 
     shared_ptr<CTRotate> rotate = make_shared<CTRotate>();
     //debugShowMat(alphaMat1);
-    Mat rotateMat1 = rotate->getRelativeRotateMat(alphaMat1, 45, alphaV);
-    Mat rotateMat2 = rotate->getRelativeRotateMat(alphaMat1, 90, alphaV);
-    Mat rotateMat3 = rotate->getRelativeRotateMat(alphaMat1, 135, alphaV);
-    Mat rotateMat4 = rotate->getRelativeRotateMat(alphaMat1, 180, alphaV);
-    Mat rotateMat5 = rotate->getRelativeRotateMat(alphaMat1, 225, alphaV);
-    Mat rotateMat6 = rotate->getRelativeRotateMat(alphaMat1, 270, alphaV);
-    Mat rotateMat7 = rotate->getRelativeRotateMat(alphaMat1, 315, alphaV);
+    Mat rotateMat1 = rotate->getRelativeRotateMatAndLabel(alphaMat1, labelMat, 45, alphaV);
+    Mat rotateMat2 = rotate->getRelativeRotateMatAndLabel(alphaMat1, labelMat, 90, alphaV);
+    Mat rotateMat3 = rotate->getRelativeRotateMatAndLabel(alphaMat1, labelMat, 135, alphaV);
+    Mat rotateMat4 = rotate->getRelativeRotateMatAndLabel(alphaMat1, labelMat, 180, alphaV);
+    Mat rotateMat5 = rotate->getRelativeRotateMatAndLabel(alphaMat1, labelMat, 225, alphaV);
+    Mat rotateMat6 = rotate->getRelativeRotateMatAndLabel(alphaMat1, labelMat, 270, alphaV);
+    Mat rotateMat7 = rotate->getRelativeRotateMatAndLabel(alphaMat1, labelMat, 315, alphaV);
 
     //Mat mirrorMat1 = rotate->getMirrorMat(rotateMat1, CTRotate::MIRRORX);
     //Mat mirrorMat2 = rotate->getMirrorMat(rotateMat2, CTRotate::MIRRORY);
