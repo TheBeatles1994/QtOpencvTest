@@ -17,3 +17,4 @@ imgs_test/
 *.png
 *.jpg
 *.ini
+library/win32/opencv/bin/OpenCVQtTest.exe

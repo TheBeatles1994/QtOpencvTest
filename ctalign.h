@@ -44,7 +44,8 @@ public:
     static vector<vector<Point> > findImageContours(Mat greyMat);                               //寻找图像中的边缘点集
     static Mat vecPointToMat(vector<Point> vecPoint, int red, int green, int blue,int edgeSpacing);             //将特定的点集变为Mat，背景为白色，点集内为指定色
     static Mat vecPointToMat(vector<Point> vecPoint, int red, int green, int blue, int alpha,int edgeSpacing);  //将特定的点集变为Mat，背景为透明色(由alpha参数决定，越高越透明)
-    static Mat vecPointToMat(Mat srcMat, vector<Point> vecPoint, Scalar backColor, int alpha, int edgeSpacing);                    //将特定的点集变为Mat，种子为原图颜色
+    static Mat vecPointToMat(Mat srcMat, vector<Point> vecPoint, Scalar backColor,int alpha,int edgeSpacing);
+    static pair<Mat, Mat> vecPointToMat(Mat srcMat, Mat dstMat, vector<Point> vecPoint, Scalar backColor, int alpha, int edgeSpacing);                    //将特定的点集变为Mat，种子为原图颜色
 };
 /* 旋转操作类 */
 class CTRotate
@@ -110,7 +111,7 @@ private:
 
 void testAlign();                                               //测试紧密排列
 void testShrink();                                              //测试边缘腐蚀
-void testDataAugmentation(Mat srcMat, Mat labelMat);                                    //测试数据增广函数
+void testDataAugmentation(Mat srcMat, Mat labelMat, string filename);                                    //测试数据增广函数
 void debugShowMat(Mat showMat,string strName = "debug");        //显示图片
 void debugSaveMat(Mat saveMat,string saveName = "saveMat.png"); //保存图片
 

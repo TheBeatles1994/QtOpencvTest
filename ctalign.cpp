@@ -1,4 +1,5 @@
 #include "ctalign.h"
+#include <sstream>
 
 /* 设置背景是否要透明 */
 // 在函数removeEdge和vecPointToMat处有使用
@@ -6,6 +7,8 @@
 /* 设置背景是否要为白色 */
 #define ISBLACK true
 
+
+string intToStr(int num);
 /*
  * 函数功能：
  * 测试并演示新函数
@@ -269,19 +272,12 @@ pair<Mat, Mat> CTRotate::removeEdge(Mat srcMat, Mat labelMat, int alpha)
 
     Mat greyMat;
     cvtColor(srcMat, greyMat, CV_BGR2GRAY);
-    threshold(greyMat, greyMat, 4, 255, CV_THRESH_BINARY);
+    threshold(greyMat, greyMat, 45, 255, CV_THRESH_BINARY);
     vector<Point> vecPoint = CTContour::findImageContours(greyMat)[0];   //寻找边缘点集
-    Mat tempMat;
-    tempMat = CTContour::vecPointToMat(srcMat, vecPoint,Scalar(0,0,0), alpha,5);
+    pair<Mat, Mat> tempPair;
+    tempPair = CTContour::vecPointToMat(srcMat, labelMat, vecPoint,Scalar(0,0,0), alpha,5);
 
-    Mat greyLabelMat;
-    cvtColor(labelMat, greyLabelMat, CV_BGR2GRAY);
-    threshold(greyLabelMat, greyLabelMat, 0, 255, CV_THRESH_BINARY);
-    vector<Point> vecLabelPoint = CTContour::findImageContours(greyLabelMat)[0];   //寻找边缘点集
-    Mat tempLabelMat;
-    tempLabelMat = CTContour::vecPointToMat(labelMat, vecLabelPoint,Scalar(0,0,0), alpha,5);
-
-    return pair<Mat, Mat>(tempMat, tempLabelMat);
+    return tempPair;
 }
 /*
  * 函数功能：
@@ -419,6 +415,81 @@ Mat CTContour::vecPointToMat(Mat srcMat, vector<Point> vecPoint, Scalar backColo
     }
 
     return tempMat;
+}
+/*
+ * 函数功能：
+ * 将特定的点集变为Mat，种子为原图颜色
+ * alpha指背景透明度，0是全透明
+ * 背景默认色为白色
+ * 无空隙
+ */
+pair<Mat, Mat> CTContour::vecPointToMat(Mat srcMat, Mat labelMat, vector<Point> vecPoint, Scalar backColor,int alpha,int edgeSpacing)
+{
+    assert(srcMat.channels() == 3||srcMat.channels() == 4);
+
+    Rect rect = cv::boundingRect(Mat(vecPoint));
+    rect.x -= edgeSpacing;
+    rect.y -= edgeSpacing;
+    rect.width += edgeSpacing*2;
+    rect.height += edgeSpacing*2;
+
+    Mat tempMat, tempLabelMat;
+    tempMat = Mat(rect.size(), CV_8UC4, Scalar(0, 0, 0,alpha));
+    tempLabelMat = Mat(rect.size(), CV_8UC4, Scalar(0, 0, 0, alpha));
+
+    for (int row = edgeSpacing; row < tempMat.rows-edgeSpacing; row++)
+    {
+        for (int col = edgeSpacing; col < tempMat.cols-edgeSpacing; col++)
+        {
+            Point pt;
+            pt.x = rect.x + col;
+            pt.y = rect.y + row;
+            if (pointPolygonTest(vecPoint, pt, false) >= 0)         //必须是大于等于，等于时会把边框也画上
+            {
+                if(srcMat.channels() == 3)
+                {
+                    tempMat.at<Vec4b>(row, col)[0] = srcMat.at<Vec3b>(pt.y, pt.x)[0];
+                    tempMat.at<Vec4b>(row, col)[1] = srcMat.at<Vec3b>(pt.y, pt.x)[1];
+                    tempMat.at<Vec4b>(row, col)[2] = srcMat.at<Vec3b>(pt.y, pt.x)[2];
+                }
+                else
+                {
+                    tempMat.at<Vec4b>(row, col)[0] = srcMat.at<Vec4b>(pt.y, pt.x)[0];
+                    tempMat.at<Vec4b>(row, col)[1] = srcMat.at<Vec4b>(pt.y, pt.x)[1];
+                    tempMat.at<Vec4b>(row, col)[2] = srcMat.at<Vec4b>(pt.y, pt.x)[2];
+                }
+                tempMat.at<Vec4b>(row, col)[3] = 255;
+
+                if(labelMat.channels() == 3)
+                {
+                    tempLabelMat.at<Vec4b>(row, col)[0] = labelMat.at<Vec3b>(pt.y, pt.x)[0];
+                    tempLabelMat.at<Vec4b>(row, col)[1] = labelMat.at<Vec3b>(pt.y, pt.x)[1];
+                    tempLabelMat.at<Vec4b>(row, col)[2] = labelMat.at<Vec3b>(pt.y, pt.x)[2];
+                }
+                else
+                {
+                    tempLabelMat.at<Vec4b>(row, col)[0] = labelMat.at<Vec4b>(pt.y, pt.x)[0];
+                    tempLabelMat.at<Vec4b>(row, col)[1] = labelMat.at<Vec4b>(pt.y, pt.x)[1];
+                    tempLabelMat.at<Vec4b>(row, col)[2] = labelMat.at<Vec4b>(pt.y, pt.x)[2];
+                }
+                tempLabelMat.at<Vec4b>(row, col)[3] = 255;
+            }
+            else
+            {
+                tempMat.at<Vec4b>(row, col)[0] = backColor[0];
+                tempMat.at<Vec4b>(row, col)[1] = backColor[1];
+                tempMat.at<Vec4b>(row, col)[2] = backColor[2];
+                tempMat.at<Vec4b>(row, col)[3] = alpha;
+
+                tempLabelMat.at<Vec4b>(row, col)[0] = backColor[0];
+                tempLabelMat.at<Vec4b>(row, col)[1] = backColor[1];
+                tempLabelMat.at<Vec4b>(row, col)[2] = backColor[2];
+                tempLabelMat.at<Vec4b>(row, col)[3] = alpha;
+            }
+        }
+    }
+
+    return pair<Mat, Mat>(tempMat, tempLabelMat);
 }
 /*
  * 函数功能：
@@ -613,7 +684,6 @@ Mat CTRotate::panningMat(Mat srcMat, Mat &dstMat, float x, float y)
     Mat dstRoi = dstMat(Rect(x,y, srcMat.cols, srcMat.rows));
     srcMat.copyTo(dstRoi);
 
-    cout<<srcMat.channels()<<" "<<dstMat.channels()<<" "<<dstRoi.channels()<<endl;
     return dstMat;
 }
 /*
@@ -831,23 +901,19 @@ void CTAlign::setAlignMat(Mat srcMat, int x, int y)
     vecMats[x][y] = srcMat;
 }
 
-void testDataAugmentation(Mat srcMat, Mat labelMat)
+void testDataAugmentation(Mat srcMat, Mat labelMat, string filename)
 {
     int alphaV = 255;
-
-    shared_ptr<CTAlpha> alpha = make_shared<CTAlpha>();
-    Mat alphaMat1 = alpha->getAlphaPic(srcMat, alphaV);
-
     shared_ptr<CTRotate> rotate = make_shared<CTRotate>();
 
-    pair<Mat, Mat> rotateMat0 = rotate->getRelativeRotateMatAndLabel(alphaMat1, labelMat, 0, alphaV);
-    pair<Mat, Mat> rotateMat1 = rotate->getRelativeRotateMatAndLabel(alphaMat1, labelMat, 45, alphaV);
-    pair<Mat, Mat> rotateMat2 = rotate->getRelativeRotateMatAndLabel(alphaMat1, labelMat, 90, alphaV);
-    pair<Mat, Mat> rotateMat3 = rotate->getRelativeRotateMatAndLabel(alphaMat1, labelMat, 135, alphaV);
-    pair<Mat, Mat> rotateMat4 = rotate->getRelativeRotateMatAndLabel(alphaMat1, labelMat, 180, alphaV);
-    pair<Mat, Mat> rotateMat5 = rotate->getRelativeRotateMatAndLabel(alphaMat1, labelMat, 225, alphaV);
-    pair<Mat, Mat> rotateMat6 = rotate->getRelativeRotateMatAndLabel(alphaMat1, labelMat, 270, alphaV);
-    pair<Mat, Mat> rotateMat7 = rotate->getRelativeRotateMatAndLabel(alphaMat1, labelMat, 315, alphaV);
+    int degree = 0;
+    for(int i=0;i<36;i++)
+    {
+        pair<Mat, Mat> rotateMat = rotate->getRelativeRotateMatAndLabel(srcMat, labelMat, degree, alphaV);
+        debugSaveMat(rotateMat.first, filename + "_" + intToStr(degree) + ".jpg");
+        debugSaveMat(rotateMat.second,filename + "_" + "Label" + "_" + intToStr(degree) + ".jpg");
+        degree += 10;
+    }
 
     //Mat mirrorMat1 = rotate->getMirrorMat(rotateMat1, CTRotate::MIRRORX);
     //Mat mirrorMat2 = rotate->getMirrorMat(rotateMat2, CTRotate::MIRRORY);
@@ -856,22 +922,13 @@ void testDataAugmentation(Mat srcMat, Mat labelMat)
     //debugShowMat(rotateMat2);
     //debugShowMat(mirrorMat1);
     //debugShowMat(mirrorMat2);
-    debugSaveMat(rotateMat0.first,"rotateMat0.png");
-    debugSaveMat(rotateMat0.second,"rotateLabelMat0.png");
-    debugSaveMat(rotateMat1.first,"rotateMat1.png");
-    debugSaveMat(rotateMat1.second,"rotateLabelMat1.png");
-    debugSaveMat(rotateMat2.first,"rotateMat2.png");
-    debugSaveMat(rotateMat2.second,"rotateLabelMat2.png");
-    debugSaveMat(rotateMat3.first,"rotateMat3.png");
-    debugSaveMat(rotateMat3.second,"rotateLabelMat3.png");
-    debugSaveMat(rotateMat4.first,"rotateMat4.png");
-    debugSaveMat(rotateMat4.second,"rotateLabelMat4.png");
-    debugSaveMat(rotateMat5.first,"rotateMat5.png");
-    debugSaveMat(rotateMat5.second,"rotateLabelMat5.png");
-    debugSaveMat(rotateMat6.first,"rotateMat6.png");
-    debugSaveMat(rotateMat6.second,"rotateLabelMat6.png");
-    debugSaveMat(rotateMat7.first,"rotateMat7.png");
-    debugSaveMat(rotateMat7.second,"rotateLabelMat7.png");
     //debugSaveMat(mirrorMat1,"mirrorMat1.png");
     //debugSaveMat(mirrorMat2,"mirrorMat2.png");
+}
+
+string intToStr(int num)
+{
+    stringstream ss;
+    ss<<num;
+    return ss.str();
 }
