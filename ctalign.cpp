@@ -910,8 +910,12 @@ void testDataAugmentation(Mat srcMat, Mat labelMat, string filename)
     for(int i=0;i<36;i++)
     {
         pair<Mat, Mat> rotateMat = rotate->getRelativeRotateMatAndLabel(srcMat, labelMat, degree, alphaV);
+        Mat mirrorMat = rotate->getMirrorMat(rotateMat.first, CTRotate::MIRRORX);
+        Mat mirrorMatLabel = rotate->getMirrorMat(rotateMat.second, CTRotate::MIRRORX);
         debugSaveMat(rotateMat.first, filename + "_" + intToStr(degree) + ".jpg");
         debugSaveMat(rotateMat.second,filename + "_" + "Label" + "_" + intToStr(degree) + ".jpg");
+        debugSaveMat(mirrorMat, filename + "_Mirror" + "_" + intToStr(degree) + ".jpg");
+        debugSaveMat(mirrorMatLabel,filename + "_Mirror" + "_" + "Label" + "_" + intToStr(degree) + ".jpg");
         degree += 10;
     }
 
