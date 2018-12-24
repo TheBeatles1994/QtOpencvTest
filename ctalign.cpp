@@ -900,34 +900,35 @@ void CTAlign::setAlignMat(Mat srcMat, int x, int y)
     assert(y<vecMats[x].size());
     vecMats[x][y] = srcMat;
 }
-
+/* ===================================================================
+ * @函数功能: 测试数据增广
+ * @输入参数: 原图，标签图，原图的文件名称(去掉后缀)
+ * @输出参数: 无
+ * @注意事项:
+ *      1. 使用此函数时要在命令行下执行exe文件，且有两个参数：第一个参数为原图包含后缀的文件名称，第二个参数为标签图包含后缀的文件名称，eg：OpenCVQtTest.exe img.png label.png
+ *      2. 此exe文件下要有两个文件夹，分别是srcImage文件夹和labelImage文件夹，里面保存的文件是原图和对应的样本图
+ *      3. 原图的文件命名为原图名称_角度.jpg
+ *      4. 对应样本图的文件命名为原图名称_Label_角度.jpg
+ *      5. 此处对一张图片扩充到72张，其中包括36次10度的旋转，以及对应的镜像
+   ===================================================================
+ */
 void testDataAugmentation(Mat srcMat, Mat labelMat, string filename)
 {
-    int alphaV = 255;
-    shared_ptr<CTRotate> rotate = make_shared<CTRotate>();
+    int alphaV = 255;   //背景设置为不透明
+    shared_ptr<CTRotate> rotate = make_shared<CTRotate>();  //用于旋转的类
 
     int degree = 0;
     for(int i=0;i<36;i++)
     {
-        pair<Mat, Mat> rotateMat = rotate->getRelativeRotateMatAndLabel(srcMat, labelMat, degree, alphaV);
-        Mat mirrorMat = rotate->getMirrorMat(rotateMat.first, CTRotate::MIRRORX);
-        Mat mirrorMatLabel = rotate->getMirrorMat(rotateMat.second, CTRotate::MIRRORX);
-        debugSaveMat(rotateMat.first, filename + "_" + intToStr(degree) + ".jpg");
-        debugSaveMat(rotateMat.second,filename + "_" + "Label" + "_" + intToStr(degree) + ".jpg");
-        debugSaveMat(mirrorMat, filename + "_Mirror" + "_" + intToStr(degree) + ".jpg");
-        debugSaveMat(mirrorMatLabel,filename + "_Mirror" + "_" + "Label" + "_" + intToStr(degree) + ".jpg");
+        pair<Mat, Mat> rotateMat = rotate->getRelativeRotateMatAndLabel(srcMat, labelMat, degree, alphaV);                      //对原图和标签图同时进行旋转，旋转角度为alphaV
+        Mat mirrorMat = rotate->getMirrorMat(rotateMat.first, CTRotate::MIRRORX);                                               //得到原图的镜像
+        Mat mirrorMatLabel = rotate->getMirrorMat(rotateMat.second, CTRotate::MIRRORX);                                         //得到标签图的镜像
+        debugSaveMat(rotateMat.first, "srcImage/" + filename + "_" + intToStr(degree) + ".jpg");                                //保存旋转后的原图
+        debugSaveMat(rotateMat.second,"labelImage/" + filename + "_" + "Label" + "_" + intToStr(degree) + ".jpg");              //保存旋转后的标签图
+        debugSaveMat(mirrorMat, "srcImage/" + filename + "_Mirror" + "_" + intToStr(degree) + ".jpg");                          //保存原图的镜像
+        debugSaveMat(mirrorMatLabel,"labelImage/" + filename + "_Mirror" + "_" + "Label" + "_" + intToStr(degree) + ".jpg");    //保存标签图的镜像
         degree += 10;
     }
-
-    //Mat mirrorMat1 = rotate->getMirrorMat(rotateMat1, CTRotate::MIRRORX);
-    //Mat mirrorMat2 = rotate->getMirrorMat(rotateMat2, CTRotate::MIRRORY);
-
-    //debugShowMat(rotateMat1);
-    //debugShowMat(rotateMat2);
-    //debugShowMat(mirrorMat1);
-    //debugShowMat(mirrorMat2);
-    //debugSaveMat(mirrorMat1,"mirrorMat1.png");
-    //debugSaveMat(mirrorMat2,"mirrorMat2.png");
 }
 
 string intToStr(int num)
